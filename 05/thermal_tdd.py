@@ -24,11 +24,20 @@ class Segment:
         return 0
 
 class Map:
+    _nrow: int
+    _ncol: int
     _grid: ty.List[ty.List[int]]
     def __init__(self, nrow, ncol):
+        self._nrow = nrow
+        self._ncol = ncol
         self._grid = [ [ 0 ] * ncol for _ in range(ncol) ]
     def count_unsafe(self):
-        return 0
+        unsafe = 0
+        for row in range(self._nrow):
+            for col in range(self._ncol):
+                if self._grid[row][col] > 1:
+                    unsafe += 1
+        return unsafe
     def count_at(self, x, y):
         return self._grid[x][y]
     def plot_track(self, seg: Segment):
@@ -85,3 +94,12 @@ class TestMap(unittest.TestCase):
         m.plot_track(seg)
         self.assertEqual(1, m.count_at(0, 1))
         self.assertEqual(1, m.count_at(4, 1))
+    def testTwoCollidingTracks(self):
+        m = Map(10, 10)
+        segs = [
+            Segment( (4, 4), (4, 6) ),
+            Segment( (5, 5), (3, 5) )
+        ]
+        for s in segs: m.plot_track(s)
+        self.assertEqual(2, m.count_at(4, 5))
+        self.assertEqual(1, m.count_unsafe())
