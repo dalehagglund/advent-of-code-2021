@@ -10,8 +10,18 @@ class Segment:
         self.x0, self.y0 = start
         self.x1, self.y1 = end
     def point_track(self):
-        yield (self.x0, self.y0)
-
+        dx = self._sign(self.x1 - self.x0)
+        dy = self._sign(self.y1 - self.y0)
+        x, y = self.x0, self.y0
+        while True:
+            yield (x, y)
+            if (x, y) == (self.x1, self.y1):
+                break
+            x, y = x + dx, y + dy
+    def _sign(self, x):
+        if x < 0: return -1
+        if x > 0: return +1
+        return 0
 class Map:
     _grid: ty.List[ty.List[int]]
     def __init__(self, nrow, ncol):
@@ -35,6 +45,26 @@ class TestSegment(unittest.TestCase):
         seg = Segment( (0, 0), (0, 0) )
         track = list(seg.point_track())
         self.assertEqual( [ (0, 0) ], track )
+    def testDownwardTwoPointTrack(self):
+        seg =  Segment( (0, 0), (0, 1) )
+        self.assertEqual(
+            [ (0, 0), (0, 1) ],
+            list(seg.point_track()))
+    def testUpwardTwoPointTrack(self):
+        seg =  Segment( (0, 1), (0, 0) )
+        self.assertEqual(
+            [ (0, 1), (0, 0) ],
+            list(seg.point_track()))
+    def testRightTrack(self):
+        seg = Segment( (1, 1), (2, 1) )
+        self.assertEqual(
+            [ (1, 1), (2, 1) ],
+            list(seg.point_track()))
+    def testLeftTrack(self):
+        seg = Segment( (2, 1), (1, 1) )
+        self.assertEqual(
+            [ (2, 1), (1, 1) ],
+            list(seg.point_track()))
 
 class TestMap(unittest.TestCase):
     def testEmptyMapHasNoIntersections(self):
@@ -45,6 +75,12 @@ class TestMap(unittest.TestCase):
         self.assertEqual(0,m.count_at(2, 2))
     def testCountSinglePointTrack(self):
         m = Map(10, 10)
-        seg = Segment( (1, 1), (1, 10) )
+        seg = Segment( (1, 1), (1, 1) )
         m.plot_track(seg)
         self.assertEqual(1, m.count_at(1, 1))
+    def testHorizontalTrack(self):
+        m = Map(10, 10)
+        seg = Segment( (0, 1), (4, 1) )
+        m.plot_track(seg)
+        self.assertEqual(1, m.count_at(0, 1))
+        self.assertEqual(1, m.count_at(4, 1))
