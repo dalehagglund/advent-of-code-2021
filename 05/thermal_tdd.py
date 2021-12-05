@@ -16,6 +16,8 @@ class Segment:
     def __init__(self, start, end):
         self.x0, self.y0 = start
         self.x1, self.y1 = end
+    def point_track(self):
+        yield (self.x0, self.y0)
 
 class TestSegment(unittest.TestCase):
     def testInitialization(self):
@@ -24,6 +26,10 @@ class TestSegment(unittest.TestCase):
         self.assertEqual(2, seg.y0)
         self.assertEqual(4, seg.x1)
         self.assertEqual(6, seg.y1)
+    def testSinglePointSegment(self):
+        seg = Segment( (0, 0), (0, 0) )
+        track = list(seg.point_track())
+        self.assertEqual(1, len(track))
 
 class TestMap(unittest.TestCase):
     def testEmptyMapHasNoIntersections(self):
