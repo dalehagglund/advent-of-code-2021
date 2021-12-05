@@ -1,18 +1,6 @@
 import unittest
 import typing as ty
 
-class Map:
-    _grid: ty.List[ty.List[int]]
-    def __init__(self, nrow, ncol):
-        self._grid = [ [ 0 ] * ncol for _ in range(ncol) ]
-    def count_unsafe(self):
-        return 0
-    def count_at(self, x, y):
-        return self._grid[x][y]
-    def plot_track(self, seg: 'Segment'):
-        for x, y in seg. point_track():
-            self._grid[x][y] += 1
-
 class Segment:
     x0: int
     y0: int
@@ -23,6 +11,18 @@ class Segment:
         self.x1, self.y1 = end
     def point_track(self):
         yield (self.x0, self.y0)
+
+class Map:
+    _grid: ty.List[ty.List[int]]
+    def __init__(self, nrow, ncol):
+        self._grid = [ [ 0 ] * ncol for _ in range(ncol) ]
+    def count_unsafe(self):
+        return 0
+    def count_at(self, x, y):
+        return self._grid[x][y]
+    def plot_track(self, seg: Segment):
+        for x, y in seg. point_track():
+            self._grid[x][y] += 1
 
 class TestSegment(unittest.TestCase):
     def testInitialization(self):
