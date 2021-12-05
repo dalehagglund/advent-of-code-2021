@@ -29,7 +29,7 @@ class TestSegment(unittest.TestCase):
     def testSinglePointSegment(self):
         seg = Segment( (0, 0), (0, 0) )
         track = list(seg.point_track())
-        self.assertEqual(1, len(track))
+        self.assertEqual( [ (0, 0) ], track )
 
 class TestMap(unittest.TestCase):
     def testEmptyMapHasNoIntersections(self):
