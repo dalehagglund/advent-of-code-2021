@@ -22,6 +22,7 @@ class Segment:
         if x < 0: return -1
         if x > 0: return +1
         return 0
+
 class Map:
     _grid: ty.List[ty.List[int]]
     def __init__(self, nrow, ncol):
@@ -67,7 +68,7 @@ class TestSegment(unittest.TestCase):
             list(seg.point_track()))
 
 class TestMap(unittest.TestCase):
-    def testEmptyMapHasNoIntersections(self):
+    def testEmptyMapHasNoUnsafePoints(self):
         m = Map(10, 10)
         self.assertEqual(0, m.count_unsafe())
     def testCountsAreZeroWithEmptyMap(self):
