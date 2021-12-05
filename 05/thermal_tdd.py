@@ -1,12 +1,17 @@
 import unittest
+import typing as ty
 
 class Map:
+    _grid: ty.List[ty.List[int]]
     def __init__(self, nrow, ncol):
-        pass
+        self._grid = [ [ 0 ] * ncol for _ in range(ncol) ]
     def count_unsafe(self):
         return 0
     def count_at(self, x, y):
-        return 0
+        return self._grid[x][y]
+    def plot_track(self, seg: 'Segment'):
+        for x, y in seg. point_track():
+            self._grid[x][y] += 1
 
 class Segment:
     x0: int
@@ -38,3 +43,8 @@ class TestMap(unittest.TestCase):
     def testCountsAreZeroWithEmptyMap(self):
         m = Map(10, 10)
         self.assertEqual(0,m.count_at(2, 2))
+    def testCountSinglePointTrack(self):
+        m = Map(10, 10)
+        seg = Segment( (1, 1), (1, 10) )
+        m.plot_track(seg)
+        self.assertEqual(1, m.count_at(1, 1))
