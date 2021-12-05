@@ -55,6 +55,14 @@ def read_segments(lines):
         segments.append(Segment((x0, y0), (x1, y1)))
     return segments
 
+def part2():
+    with open("input.txt") as f:
+        segments = read_segments(f)
+    m = Map(1000, 1000)
+    for s in segments:
+        m.plot_track(s)
+    print(m.count_unsafe())
+
 class TestSegmentReader(unittest.TestCase):
     def testSingleSegment(self):
         lines = [ 
@@ -126,3 +134,6 @@ class TestMap(unittest.TestCase):
         for s in segs: m.plot_track(s)
         self.assertEqual(2, m.count_at(4, 5))
         self.assertEqual(1, m.count_unsafe())
+
+if __name__ == '__main__':
+    part2()
