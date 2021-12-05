@@ -1,6 +1,8 @@
 import unittest
 import typing as ty
+from dataclasses import dataclass
 
+@dataclass
 class Segment:
     x0: int
     y0: int
@@ -43,6 +45,27 @@ class Map:
     def plot_track(self, seg: Segment):
         for x, y in seg. point_track():
             self._grid[x][y] += 1
+
+def read_segments(lines):
+    segments = []
+    for line in lines:
+        start, end = line.strip().split(" -> ")
+        x0, y0 = map(int, start.split(","))
+        x1, y1 = map(int, end.split(","))
+        segments.append(Segment((x0, y0), (x1, y1)))
+    return segments
+
+class TestSegmentReader(unittest.TestCase):
+    def testSingleSegment(self):
+        lines = [ 
+            "0,0 -> 1,1\n",
+            " 0,0 -> 1,1",
+            "0,0 -> 1,1",
+            ]
+        seg = Segment( (0, 0), (1, 1) )
+        self.assertEqual(
+            [ seg, seg, seg ],
+            read_segments(lines))
 
 class TestSegment(unittest.TestCase):
     def testInitialization(self):
