@@ -43,6 +43,9 @@ class Member:
     def from_json(cls, j: dict) -> 'Member':
         d = dict(j.items())
 
+        if d['name'] is None:
+            d['name'] = f"Anon #{d['id']}"
+
         levels = d["completion_day_level"]
         del d["completion_day_level"]
         d["days"] = [
@@ -75,8 +78,10 @@ def main():
         members, key=lambda name: -members[name].local_score
     ):
         m = members[k]
+        if m.local_score == 0:
+            continue
         print(" ".join([
-            f'{m.name:<15}',
+            f'{m.name:<15.15}',
             f'{m.local_score:>5}',
             " ".join(
                 f'{h:3d}:{m:02d}:{s:02d}'
