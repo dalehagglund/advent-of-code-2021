@@ -46,17 +46,17 @@ def solve(left: ty.Set[str], right: ty.List[str]):
         return { s for s in left if len(s) == n }
 
     def do_singleton(length: int, value: int):
-        wires = with_len(length).pop()
-        outputs = set(segments[value])
-        for wire in wires:
-            solution[wire] &= outputs
+        common_wires = set.intersection(*map(set, with_len(length)))
+        common_outputs = set.intersection(*[set(segments[v]) for v in [value]])
+        for wire in common_wires:
+            solution[wire] &= common_outputs
         for wire, sol in solution.items():
-            if wire in wires:
+            if wire in common_wires:
                 continue
-            sol -= outputs
+            sol -= common_outputs
 
     def do_triple(length: int, values: ty.Set[int]):
-        common_wires = set.intersection(*[set(w) for w in with_len(length)])
+        common_wires = set.intersection(*map(set, with_len(length)))
         common_outputs = set.intersection(*[set(segments[v]) for v in values])
         for wire in common_wires:
             solution[wire] &= common_outputs
