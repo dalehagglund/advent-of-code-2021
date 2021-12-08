@@ -75,18 +75,18 @@ def solve(left: ty.Set[str], right: ty.List[str]):
     for k in solution:
         solution[k] = solution[k].pop()
 
-    def translate(wire: str) -> int:
-        segs = "".join(sorted(solution[w] for w in wire))
+    def translate(wires: str) -> int:
+        segs = "".join(sorted(solution[w] for w in wires))
         return str(display_value[segs])
     
-    return int("".join(translate(wire) for wire in right))
+    return int("".join(translate(wires) for wires in right))
 
 def part2(fname):
     print("===== part 2")
     sum = 0
     for left, right in read_input(fname):
         sum += solve(left, right)
-    print(sum)
+    print("part 2:", sum)
 
 if __name__ == '__main__':
     part1(sys.argv[1])
