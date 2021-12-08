@@ -73,13 +73,10 @@ def main():
         h, rem = divmod(seconds, 3600)
         m, s = divmod(rem, 60)
         return h, m, s
+    def score(m): return m.local_score
 
-    for k in sorted(
-        members, key=lambda name: -members[name].local_score
-    ):
-        m = members[k]
-        if m.local_score == 0:
-            continue
+    for m in sorted(members.values(), key=lambda m: -score(m)):
+        if score(m) == 0: continue
         print(" ".join([
             f'{m.name:<15.15}',
             f'{m.local_score:>5}',
