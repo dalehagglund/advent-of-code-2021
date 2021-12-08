@@ -29,7 +29,7 @@ id = int(config['boards'][board])
 session = config['fetch']['session']
 
 url = board_url(config, id)
-dest = board + ".json"
+dest = f'data/{board}.json'
 
 print(f"year {year} board {board}")
 print(f"from {url}")
