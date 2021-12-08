@@ -40,8 +40,7 @@ def part1(fname):
     print("part 1: ", count)
 
 def solve(left: ty.Set[str], right: ty.List[str]):
-    from functools import reduce
-    solution = { wire: set("ABCDEFG") for wire in "abcdefg" }
+    assignment = { wire: set("ABCDEFG") for wire in "abcdefg" }
     def with_len(n: int) -> ty.Set[str]:
         return { s for s in left if len(s) == n }
 
@@ -49,8 +48,8 @@ def solve(left: ty.Set[str], right: ty.List[str]):
         common_wires = set.intersection(*map(set, with_len(length)))
         common_outputs = set.intersection(*[set(segments[v]) for v in [value]])
         for wire in common_wires:
-            solution[wire] &= common_outputs
-        for wire, sol in solution.items():
+            assignment[wire] &= common_outputs
+        for wire, sol in assignment.items():
             if wire in common_wires:
                 continue
             sol -= common_outputs
@@ -59,24 +58,24 @@ def solve(left: ty.Set[str], right: ty.List[str]):
         common_wires = set.intersection(*map(set, with_len(length)))
         common_outputs = set.intersection(*[set(segments[v]) for v in values])
         for wire in common_wires:
-            solution[wire] &= common_outputs
-        singletons = [ w for w, sol in solution.items() if len(sol) == 1 ]
-        for wire, sol in solution.items():
+            assignment[wire] &= common_outputs
+        singletons = [ w for w, sol in assignment.items() if len(sol) == 1 ]
+        for wire, sol in assignment.items():
             if len(sol) == 1:
                 continue
             for w in singletons:
-                sol -= solution[w]
+                sol -= assignment[w]
 
     for nseg, value in [ (2, 1), (3, 7), (4, 4) ]:
         do_singleton(nseg, value)
     for nseg, values in [ (5, {2, 3, 5}), (6, {0, 6, 9}) ]:
         do_triple(nseg, values)
 
-    for k in solution:
-        solution[k] = solution[k].pop()
+    for k in assignment:
+        assignment[k] = assignment[k].pop()
 
     def translate(wires: str) -> int:
-        segs = "".join(sorted(solution[w] for w in wires))
+        segs = "".join(sorted(assignment[w] for w in wires))
         return str(display_value[segs])
     
     return int("".join(translate(wires) for wires in right))
