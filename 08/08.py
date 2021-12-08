@@ -29,15 +29,15 @@ def read_input(fname: str) -> ty.Iterator[ty.Tuple[ty.Set[str], ty.List[str]]]:
             right = [ sorted(s) for s in right.split(" ") ]
             yield (left, right)
 
-# def part1(fname):
-#     print("===== part 1")
-#     lines = read_input(fname)
-#     # print(len(lines), lines[0])
-#     # print(bysize)
-#     count = 0
-#     for left, right in lines:
-#         count += sum(len(bysize[len(s)]) == 1 for s in right)
-#     print("part 1: ", count)
+def part1(fname):
+    print("===== part 1")
+    unique_lengths = {
+        len(output[i]) for i in [1, 4, 7, 8]
+    }
+    count = 0
+    for left, right in read_input(fname):
+        count += sum(len(s) in unique_lengths for s in right)
+    print("part 1: ", count)
 
 def solve(left: ty.Set[str], right: ty.List[str]):
     from functools import reduce
@@ -100,5 +100,5 @@ def part2(fname):
     print(sum)
 
 if __name__ == '__main__':
-    # part1(sys.argv[1])
+    part1(sys.argv[1])
     part2(sys.argv[1])
