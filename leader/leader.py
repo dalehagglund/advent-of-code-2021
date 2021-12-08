@@ -69,10 +69,11 @@ def main():
     members: ty.Dict[str, Member] = load_members(filename)
 
     def hms(t: dt.timedelta) -> ty.Tuple[int, int, int]:
+        if t is None: return "        -"
         seconds = int(t.total_seconds())
         h, rem = divmod(seconds, 3600)
         m, s = divmod(rem, 60)
-        return h, m, s
+        return f'{h:3d}:{m:02d}:{s:02d}'
     def score(m): return m.local_score
 
     for m in sorted(members.values(), key=lambda m: -score(m)):
@@ -80,11 +81,7 @@ def main():
         print(" ".join([
             f'{m.name:<15.15}',
             f'{m.local_score:>5}',
-            " ".join(
-                f'{h:3d}:{m:02d}:{s:02d}'
-                for result in m.days
-                for h, m, s in [ hms(result.star1) ]
-            ),
+            " ".join(hms(result.star2) for result in m.days),
         ]))
 
 if __name__ == "__main__":
