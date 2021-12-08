@@ -39,8 +39,9 @@ def part1(fname):
         count += sum(len(s) in unique_lengths for s in right)
     print("part 1: ", count)
 
-def solve(left: ty.Set[str], right: ty.List[str]):
+def create_assignment(left: ty.Set[str]) -> ty.Dict[str, str]:
     assignment = { wire: set("ABCDEFG") for wire in "abcdefg" }
+
     def with_len(n: int) -> ty.Set[str]:
         return { s for s in left if len(s) == n }
 
@@ -73,12 +74,16 @@ def solve(left: ty.Set[str], right: ty.List[str]):
 
     for k in assignment:
         assignment[k] = assignment[k].pop()
+    return assignment
 
-    def translate(wires: str) -> int:
+def solve(left: ty.Set[str], right: ty.List[str]):
+    assignment = create_assignment(left)
+
+    def translate(wires: str, assignment: ty.Dict[str, str]) -> int:
         segs = "".join(sorted(assignment[w] for w in wires))
         return str(display_value[segs])
     
-    return int("".join(translate(wires) for wires in right))
+    return int("".join(translate(wires, assignment) for wires in right))
 
 def part2(fname):
     print("===== part 2")
