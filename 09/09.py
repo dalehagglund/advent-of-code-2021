@@ -9,14 +9,10 @@ def read_array(fname):
     return len(grid), len(grid[0]), grid
 
 def neighbours(nrow, ncol, row, col):
-    if row > 0:
-        yield row - 1, col
-    if col > 0:
-        yield row, col - 1
-    if col < ncol - 1:
-        yield row, col + 1
-    if row < nrow - 1:
-        yield row + 1, col
+    if row > 0:        yield row - 1, col
+    if col > 0:        yield row, col - 1
+    if col < ncol - 1: yield row, col + 1
+    if row < nrow - 1: yield row + 1, col
 
 def lowpoints(grid, nrow, ncol):
     for row in range(nrow):
