@@ -39,6 +39,8 @@ def part1(fname):
         count += sum(len(s) in unique_lengths for s in right)
     print("part 1: ", count)
 
+def intersection(sets): return set.intersection(*sets)
+
 def create_assignment(left: ty.Set[str]) -> ty.Dict[str, str]:
     assignment = { wire: set("ABCDEFG") for wire in "abcdefg" }
 
@@ -46,8 +48,8 @@ def create_assignment(left: ty.Set[str]) -> ty.Dict[str, str]:
         return { s for s in left if len(s) == n }
 
     def do_singleton(length: int, value: int):
-        common_wires = set.intersection(*map(set, with_len(length)))
-        common_outputs = set.intersection(*[set(segments[v]) for v in [value]])
+        common_wires = intersection(map(set, with_len(length)))
+        common_outputs = intersection(set(segments[v]) for v in [value])
         for wire in common_wires:
             assignment[wire] &= common_outputs
         for wire, sol in assignment.items():
@@ -56,8 +58,8 @@ def create_assignment(left: ty.Set[str]) -> ty.Dict[str, str]:
             sol -= common_outputs
 
     def do_triple(length: int, values: ty.Set[int]):
-        common_wires = set.intersection(*map(set, with_len(length)))
-        common_outputs = set.intersection(*[set(segments[v]) for v in values])
+        common_wires = intersection(map(set, with_len(length)))
+        common_outputs = intersection(set(segments[v]) for v in values)
         for wire in common_wires:
             assignment[wire] &= common_outputs
         singletons = [ w for w, sol in assignment.items() if len(sol) == 1 ]
