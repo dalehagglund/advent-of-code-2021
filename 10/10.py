@@ -1,3 +1,4 @@
+from functools import reduce
 import sys
 
 class Illegal(Exception): pass
@@ -79,11 +80,13 @@ def solve(fname):
             c = exc.args[0]
             syntax_score += syntax_scores[c]
         except Incomplete as exc:
-            cscore = 0
-            for c in exc.args[0]:
-                cscore *= 5
-                cscore += incomplete_scores[c]
-            completion_scores.append(cscore)
+            completion_scores.append(
+                reduce(
+                    lambda s, n: s * 5 + n,
+                    (incomplete_scores[c] for c in exc.args[0]),
+                    0
+                )
+            )
         
     print(f'part 1: {syntax_score}')
 
