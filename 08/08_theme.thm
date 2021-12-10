@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view fontsize="20">
+
+<defaultnode/>
+
+<defaultedge/>
+
+<node>
+   <type name="A"/>
+   <type name="B"/>
+   <type name="C"/>
+   <type name="D"/>
+   <type name="Display"/>
+   <type name="E"/>
+   <type name="Eight"/>
+   <type name="F"/>
+   <type name="Five"/>
+   <type name="Four"/>
+   <type name="G"/>
+   <type name="Lit"/>
+   <type name="Nine"/>
+   <type name="One"/>
+   <type name="Seven"/>
+   <type name="Six"/>
+   <type name="String"/>
+   <type name="Three"/>
+   <type name="Two"/>
+   <type name="univ"/>
+   <type name="Zero"/>
+   <type name="seq/Int"/>
+</node>
+
+<node visible="no">
+   <type name="Digit"/>
+   <type name="Int"/>
+</node>
+
+<edge attribute="yes">
+   <relation name="wires"> <type name="Digit"/> <type name="Int"/> </relation>
+</edge>
+
+<edge color="Red" attribute="yes" weight="15">
+   <relation name="v"> <type name="Lit"/> <type name="Int"/> </relation>
+</edge>
+
+<edge visible="no" attribute="yes">
+   <relation name="d1"> <type name="Display"/> <type name="Lit"/> </relation>
+   <relation name="d2"> <type name="Display"/> <type name="Lit"/> </relation>
+   <relation name="d3"> <type name="Display"/> <type name="Lit"/> </relation>
+   <relation name="d4"> <type name="Display"/> <type name="Lit"/> </relation>
+   <relation name="v1"> <type name="Display"/> <type name="Digit"/> </relation>
+   <relation name="v2"> <type name="Display"/> <type name="Digit"/> </relation>
+   <relation name="v3"> <type name="Display"/> <type name="Digit"/> </relation>
+   <relation name="v4"> <type name="Display"/> <type name="Digit"/> </relation>
+</edge>
+
+</view>
+
+</alloy>
