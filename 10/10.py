@@ -41,13 +41,13 @@ def read_input(fname):
             yield line
 
 test_input = [ 
-    # "()\n",
-    # "<>\n",
-    # "[]\n",
-    # "{}\n",
-    # "(())\n",
-    # "()<>\n",
-    # "([]{})\n",
+    "()\n",
+    "<>\n",
+    "[]\n",
+    "{}\n",
+    "(())\n",
+    "()<>\n",
+    "([]{})\n",
     "(]\n",
 ]
 
@@ -65,13 +65,12 @@ incomplete_scores = {
     '>': 4,
 }
 
-def part1(fname):
+def solve(fname):
     lines = read_input(fname)
     syntax_score = 0
     completion_scores = []
 
     for line in lines:
-        completion_score = 0
         # print(f"---> {line.strip()}")
         try:
             closing = bal(enumerate(iter(line)), "\n")
@@ -80,11 +79,11 @@ def part1(fname):
             c = exc.args[0]
             syntax_score += syntax_scores[c]
         except Incomplete as exc:
+            cscore = 0
             for c in exc.args[0]:
-                completion_score *= 5
-                completion_score += incomplete_scores[c]
-            print(f'{completion_score = }')
-            completion_scores.append(completion_score)
+                cscore *= 5
+                cscore += incomplete_scores[c]
+            completion_scores.append(cscore)
         
     print(f'part 1: {syntax_score}')
 
@@ -92,9 +91,5 @@ def part1(fname):
     mid = len(completion_scores) // 2
     print(f'part 2: {completion_scores[mid]}')
 
-def part2(fname):
-    print('part 2:')
-
 if __name__ == '__main__':
-    part1(sys.argv[1])
-    # part2(sys.argv[1])
+    solve(sys.argv[1])
