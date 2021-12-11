@@ -21,25 +21,27 @@ def tap(f, s):
         f(s)
         yield item
 
-def neighbours(grid, row, col):
-    nrow, ncol = grid.shape
-    s = itertools.product([ -1, 0, +1 ], repeat=2)
-    s = itertools.filterfalse(star(lambda dr, dc: dr == 0 and dc == 0), s)
-    s = map(star(lambda dr, dc: (row + dr, col + dc)), s)
-    s = filter(star(lambda r, c: 0 <= r < nrow and 0 <= c < ncol), s)
-    return s
+def bool_like(a):
+    return np.zeros_like(a, dtype=np.bool8)
 
 def step(grid):
-    flashed = np.zeros_like(grid, dtype=np.bool8)
+    def neighbours(a, i, j):
+        return (
+            slice(max(0, i - 1), i + 2),
+            slice(max(0, j - 1), j + 2)
+        )
+
+    flashed = bool_like(grid)
 
     grid += 1
     while np.any(grid > 9):
         inc = np.zeros_like(grid)
         toflash = grid > 9
-        for r, c in np.transpose(np.nonzero(toflash)):
-            for nr, nc in neighbours(grid, r, c):
-                if flashed[nr, nc]: continue
-                inc[nr, nc] += 1
+        # this increments the flashed cells as well, but we
+        # reset all the flashed cells to zero anyway at the
+        # end of the loop
+        for r, c in np.argwhere(toflash):
+            inc[neighbours(grid, r, c)] += 1
         flashed |= toflash
         grid += inc
         grid[flashed] = 0
