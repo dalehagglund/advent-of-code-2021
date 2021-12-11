@@ -30,10 +30,9 @@ def neighbours(grid, row, col):
     return s
 
 def step(grid):
-    nrow, ncol = grid.shape
-    
-    grid += 1
     flashed = np.zeros(grid.shape, dtype=np.bool8)
+
+    grid += 1
     while np.any(grid > 9):
         inc = np.zeros(grid.shape, dtype=np.int32)
         toflash = grid > 9
