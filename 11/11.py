@@ -21,7 +21,7 @@ def tap(f, s):
         f(s)
         yield item
 
-def bool_like(a):
+def false_like(a):
     return np.zeros_like(a, dtype=np.bool8)
 
 def step(grid):
@@ -31,7 +31,7 @@ def step(grid):
             slice(max(0, j - 1), j + 2)
         )
 
-    flashed = bool_like(grid)
+    flashed = false_like(grid)
     grid += 1
     while np.any(grid > 9):
         inc = np.zeros_like(grid)
