@@ -32,7 +32,6 @@ def step(grid):
         )
 
     flashed = bool_like(grid)
-
     grid += 1
     while np.any(grid > 9):
         inc = np.zeros_like(grid)
