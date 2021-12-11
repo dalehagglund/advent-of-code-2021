@@ -1,3 +1,4 @@
+from itertools import chain, count, repeat, islice
 import typing as ty
 
 import json
@@ -11,8 +12,8 @@ EST = ZoneInfo("US/Eastern")
 
 @dataclass
 class DailyResults:
-    star1: ty.Optional[dt.timedelta]
-    star2: ty.Optional[dt.timedelta]
+    star1: ty.Optional[dt.timedelta] = None
+    star2: ty.Optional[dt.timedelta] = None
 
     @classmethod
     def from_json(cls, j: dict):
@@ -74,14 +75,27 @@ def main():
         h, rem = divmod(seconds, 3600)
         m, s = divmod(rem, 60)
         return f'{h:3d}:{m:02d}:{s:02d}'
-    def score(m): return m.local_score
 
+    def score(m): return m.local_score
+    def pad(s, value): return chain(s, repeat(value))
+
+    ndays = max(len(m.days) for m in members.values())
+    day_labels = count(1)
+    print(" ".join([
+        f'{" ":15}',
+        f'{" ":5}',
+        " ".join(f'{label:>9}' for label in islice(day_labels, ndays)),
+    ]))
     for m in sorted(members.values(), key=lambda m: -score(m)):
         if score(m) == 0: continue
         print(" ".join([
             f'{m.name:<15.15}',
             f'{m.local_score:>5}',
-            " ".join(hms(result.star2) for result in m.days),
+            " ".join(
+                hms(result.star2)
+                for result
+                in islice(pad(m.days, DailyResults()), ndays)
+            ),
         ]))
 
 if __name__ == "__main__":
