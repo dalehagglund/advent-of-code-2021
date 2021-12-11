@@ -77,14 +77,16 @@ def main():
         return f'{h:3d}:{m:02d}:{s:02d}'
 
     def score(m): return m.local_score
-    def pad(s, value): return chain(s, repeat(value))
+    def pad_days(s):
+        return chain(s, repeat(DailyResults()))
 
     ndays = max(len(m.days) for m in members.values())
+    start = ndays - 9
     day_labels = count(1)
     print(" ".join([
         f'{" ":15}',
         f'{" ":5}',
-        " ".join(f'{label:>9}' for label in islice(day_labels, ndays)),
+        " ".join(f'{label:>9}' for label in islice(day_labels, start, ndays)),
     ]))
     for m in sorted(members.values(), key=lambda m: -score(m)):
         if score(m) == 0: continue
@@ -94,7 +96,7 @@ def main():
             " ".join(
                 hms(result.star2)
                 for result
-                in islice(pad(m.days, DailyResults()), ndays)
+                in islice(pad_days(m.days), start, ndays)
             ),
         ]))
 
