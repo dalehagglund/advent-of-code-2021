@@ -91,14 +91,8 @@ def solve(
     #
     # where enc(n) represents the standard encoding of n
 
-    obs[2] = unique(
-        choice25,
-        lambda o: len(o & obs[4]) == 2
-    )
-    obs[5] = unique(
-        choice25,
-        lambda o: len(o & obs[4]) == 3
-    )
+    obs[2] = unique(choice25, lambda o: len(o & obs[4]) == 2)
+    obs[5] = unique(choice25, lambda o: len(o & obs[4]) == 3)
     assert { obs[2], obs[5] } == choice25
 
     ## now consider the observations of length 6, which must
@@ -110,10 +104,7 @@ def solve(
     # first observe that 6 and 9 are supersets of 5 but 0
     # is not a superset of 5.
 
-    obs[0] = unique(
-        choice069,
-        lambda o: not(o > obs[5])
-    )
+    obs[0] = unique(choice069, lambda o: not(o > obs[5]))
     choice69 = choice069 - { obs[0] }
 
     # next note that
