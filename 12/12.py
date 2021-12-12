@@ -55,15 +55,13 @@ class PathState:
         return self.path[-1]
 
     def next_state_2(self) -> ty.Iterator['PathState']:
-        last = self.path[-1]
-        g = self.g
-        for n in g.adjacent[last]:
+        for n in self.g.adjacent[self.path[-1]]:
             dup_small = self.dup_small
             if n.is_big():
                 pass
             elif n not in self.visited:
                 pass
-            elif n == g.lookup('start') or n == g.lookup('end'):
+            elif n == self.g.lookup('start') or n == self.g.lookup('end'):
                 continue
             elif dup_small is None:
                 dup_small = n
@@ -71,19 +69,17 @@ class PathState:
                 continue
                     
             yield PathState(
-                g = g,
-                visited = self.visited.union({ n }),
+                g = self.g,
+                visited = self.visited | { n },
                 path = self.path + [n], 
                 dup_small = dup_small,
             )
             
     def next_state_1(self) -> ty.Iterator['PathState']:
-        last = self.path[-1]
-        g = self.g
-        for n in g.adjacent[last]:
+        for n in self.g.adjacent[self.path[-1]]:
             if n in self.visited and n.is_small(): continue
             yield PathState(
-                g = g,
+                g = self.g,
                 visited = self.visited.union({ n }),
                 path = self.path + [n]
             )
@@ -115,9 +111,6 @@ def part1(fname: str):
     start = g.lookup('start')
     end = g.lookup('end')
 
-    # for path in find_paths(g, start, end):
-    #     print(",".join(n.label for n in path))
-
     paths = list(find_paths(g, start, end, PathState.next_state_1))
     print(f"part1: {len(paths)}")
 
@@ -129,4 +122,3 @@ def part2(fname: str):
 
 if __name__ == '__main__':
     part1(sys.argv[1])
-    part2(sys.argv[1])
