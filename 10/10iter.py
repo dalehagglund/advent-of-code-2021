@@ -9,7 +9,7 @@ class Status(Enum):
 
 def bal(s: str):
     pending = []
-    match = dict([ "()", "[]", "<>", "{}" ] )
+    match = dict("[] () <> {}".split())
     opening = frozenset(match.keys())
     closing = frozenset(match.values())
 
