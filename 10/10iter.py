@@ -1,6 +1,7 @@
 from enum import Enum, auto
 import sys
 from functools import reduce
+from itertools import chain
 
 class Status(Enum):
     OK = auto()
@@ -50,7 +51,7 @@ syntax_scores = {
     '>': 25137,
 }
 
-incomplete_scores = {
+incomplete_penalty = {
     ')': 1,
     ']': 2,
     '}': 3,
@@ -60,7 +61,7 @@ incomplete_scores = {
 def solve(fname):
     lines = read_input(fname)
     syntax_score = 0
-    completion_scores = []
+    incomplete_scores = []
 
     for line in lines:
         # print(f"---> {line.strip()}")
@@ -72,19 +73,18 @@ def solve(fname):
         elif status == Status.MISMATCH:
             syntax_score += syntax_scores[result]
         elif status == Status.INCOMPLETE:
-            completion_scores.append(
-                reduce(
-                    lambda s, n: s * 5 + n,
-                    (incomplete_scores[c] for c in result),
-                    0
-                )
-            )
+            def running_score(so_far, penalty):
+                return 5 * so_far + penalty
+            s = (incomplete_penalty[c] for c in result)
+            s = chain([0], s)       # initial score value is zero
+            incomplete_scores.append(
+                reduce(running_score, s))
         
     print(f'part 1: {syntax_score}')
 
-    completion_scores.sort()
-    mid = len(completion_scores) // 2
-    print(f'part 2: {completion_scores[mid]}')
+    incomplete_scores.sort()
+    mid = len(incomplete_scores) // 2
+    print(f'part 2: {incomplete_scores[mid]}')
 
 if __name__ == '__main__':
     solve(sys.argv[1])
