@@ -64,21 +64,16 @@ def flip_at_row(mat, r):
     upper = mat[0 : r, :]
     lower = mat[r+1 :, :]
 
-    lower = zero_extend(upper.shape, lower)
-    assert upper.shape == lower.shape, f'{upper.shape = } {lower.shape = }'
-
-    newm = upper + np.flipud(lower)
+    newm = upper + np.flipud(zero_extend(upper.shape, lower))
     newm[newm > 0] = 1
+
     return newm
 
 def flip_at_col(mat, c):
     left = mat[:, 0 : c]
     right = mat[:, c+1 :]
 
-    right = zero_extend(left.shape, right)
-    assert left.shape == right.shape, f'{left.shape = } {right.shape = }'
-
-    newm = left + np.fliplr(right)
+    newm = left + np.fliplr(zero_extend(left.shape, right))
     newm[newm > 0] = 1
     return newm
 
