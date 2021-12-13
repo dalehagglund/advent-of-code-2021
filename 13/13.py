@@ -31,6 +31,35 @@ def read_input(fname: str):
         m[r, c] = 1
     return folds, m
 
+def zero_extend(desired, mat):
+    assert sum(x != y for x, y in zip(desired, mat.shape)) < 2, \
+        f'shapes must match in 0 or 1 places: {desired} {mat.shape}'
+
+    if desired == mat.shape:
+        return mat
+
+    desired_rows, desired_cols = desired
+    mat_rows, mat_cols = mat.shape
+
+    if desired_rows != mat_rows:
+        assert mat_rows < desired_rows
+        zrows = desired_rows - mat_rows
+        zcols = desired_cols
+        axis = 0
+    elif desired_cols != mat_cols:
+        assert mat_cols < desired_cols
+        zrows = desired_rows
+        zcols = desired_cols - mat_cols
+        axis = 1
+    else:
+        assert "huh?"
+
+
+    return np.append(
+        mat, 
+        np.zeros((zrows, zcols), dtype=np.int32),
+        axis=axis)
+
 def flip_at_row(mat, r):
     nr, nc = mat.shape
     print(f'flip row: {nr = } {nc = } {r = } ')
@@ -38,16 +67,7 @@ def flip_at_row(mat, r):
     upper = mat[0 : r, :]
     lower = mat[r+1 :, :]
 
-    ur, _ = upper.shape
-    lr, _ = lower.shape
-    if lr != ur:
-        lower = np.append(
-            lower,
-            np.zeros((ur - lr, nc), dtype=np.int32),
-            axis=0)
-    print_array(">>> flip row upper", upper)
-    print_array(">>> flip row lower", lower)
-
+    lower = zero_extend(upper.shape, lower)
     assert upper.shape == lower.shape, f'{upper.shape = } {lower.shape = }'
 
     newm = upper + np.flipud(lower)
@@ -61,16 +81,7 @@ def flip_at_col(mat, c):
     left = mat[:, 0 : c]
     right = mat[:, c+1 :]
 
-    _, lc = left.shape
-    _, rc = right.shape
-    if lc != rc:
-        right = np.append(
-            right,
-            np.zeros((nr, lc - rc), dtype=np.int32),
-            axis=1)
-    print_array(">>> flip row left", left)
-    print_array(">>> flip row right", right)
-
+    right = zero_extend(left.shape, right)
     assert left.shape == right.shape, f'{left.shape = } {right.shape = }'
 
     newm = left + np.fliplr(right)
@@ -93,10 +104,10 @@ def part1(fname: str):
 def part2(fname: str):
     print("===== PART 2 =====")
     folds, mat = read_input(fname)
-    print(f'{mat.shape = }')
+    # print(f'{mat.shape = }')
     for i, (dim, n) in enumerate(folds):
-        print(f'mat[{i}] {mat.shape = } {dim = } {n = }')
-        print_array(f'> mat[{i}]', mat)
+        # print(f'mat[{i}] {mat.shape = } {dim = } {n = }')
+        # print_array(f'> mat[{i}]', mat)
         mat = flips[dim](mat, n)
     print_array("final", mat)
     print("part 2:")
