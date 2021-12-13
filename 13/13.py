@@ -61,9 +61,6 @@ def zero_extend(desired, mat):
         axis=axis)
 
 def flip_at_row(mat, r):
-    nr, nc = mat.shape
-    print(f'flip row: {nr = } {nc = } {r = } ')
-
     upper = mat[0 : r, :]
     lower = mat[r+1 :, :]
 
@@ -75,9 +72,6 @@ def flip_at_row(mat, r):
     return newm
 
 def flip_at_col(mat, c):
-    nr, nc = mat.shape
-    print(f'flip col: {nr = } {nc = } {c = }')
-
     left = mat[:, 0 : c]
     right = mat[:, c+1 :]
 
