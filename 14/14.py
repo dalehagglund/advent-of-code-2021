@@ -36,18 +36,11 @@ def step(poly: str, rules) -> str:
     return "".join(result)
         
 def part1(fname: str):
-    print("===== PART 1 =====")
     alphabet, poly, rules = read_input(fname)
-
-    print(f'{alphabet = }')
-    print(f'{poly = }')
-    # print(f'{rules = }')
     for i in range(10):
         poly = step(poly, rules)
-        # print(f'step {i}: {len(poly)} {poly}')
 
     counts = Counter(poly)
-    print(counts)
     seq = counts.most_common()
     first, *_, last = seq
     print(f'part1: {first[1] - last[1]}')
@@ -81,21 +74,14 @@ def print_cache(cache):
         )
 
 def part2(fname: str):
-    print("===== PART 2 =====")
-
-    cache = {}
     alphabet, poly, rules = read_input(fname)
-    print(f'{alphabet = }')
-    print(f'{poly = }')
     depth = 40
 
+    cache = {}
     alphapairs = list(itertools.product(alphabet, repeat=2))
     for depth in range(0, depth + 1):
         for c1, c2 in alphapairs:
             cache[ (c1, c2, depth) ] = counts(cache, rules, depth, c1, c2)
-        # print(f'depth {depth}')
-        # print_cache(cache)
-    # print_cache(cache)
 
     pairs = pairwise(chain(
         [None], 
@@ -105,8 +91,6 @@ def part2(fname: str):
 
     c: Counter = Counter()
     for left, right in pairs:
-        # print(f'starting {(left, right)}')
-
         if left is None:
             c.update(cache[ (*right, depth) ])
         elif right is None:
@@ -115,11 +99,6 @@ def part2(fname: str):
             c.update(cache[ (*right, depth) ])
             c[right[0]] -= 1
 
-        # print(f'after {(left, right)}')
-        # print(c)
-
-    print('after for loop!')
-    print(c)
     seq = c.most_common()
     first, *_, last = seq
     print(f'part1: {first[1] - last[1]}')
