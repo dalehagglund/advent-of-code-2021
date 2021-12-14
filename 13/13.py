@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 import numpy as np
 
+def falses(shape): return np.zeros(shape, dtype=np.bool8)
+
 def print_array(label, m):
     print(f">>> arrray {label} {m.shape = } {np.sum(m) = }<<<")
     nrow, ncol = m.shape
@@ -26,7 +28,7 @@ def read_input(fname: str):
 
     maxrow = max(coords, key=lambda t: t[0])[0] + 1
     maxcol = max(coords, key=lambda t: t[1])[1] + 1
-    m = np.zeros((maxrow, maxcol), dtype=np.bool8)
+    m = falses((maxrow, maxcol))
     for r, c in coords:
         m[r, c] = 1
     return folds, m
@@ -54,10 +56,7 @@ def zero_extend(desired, mat):
     else:
         assert "huh?"
 
-    return np.append(
-        mat, 
-        np.zeros((zrows, zcols), dtype=np.bool8),
-        axis=axis)
+    return np.append(mat, falses((zrows, zcols)), axis=axis)
 
 def flip_at_row(mat, r):
     upper = mat[0 : r, :]
