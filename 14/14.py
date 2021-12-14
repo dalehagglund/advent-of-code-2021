@@ -7,6 +7,9 @@ from enum import auto, Enum
 from itertools import tee, chain
 from collections import Counter
 
+def star(f):
+    return lambda t: f(*t)
+
 def pairwise(iterable):
     a, b = tee(iterable)
     next(b, None)
@@ -48,16 +51,12 @@ def counts(cache, rules, depth, c1, c2):
         return Counter(c1 + c2)
 
     ins = rules[(c1, c2)]
-
     c = Counter()
     c.update(cache[ (c1, ins, depth-1) ] )
     c.update(cache[ (ins, c2, depth-1) ] )
     c[ins] -= 1
 
     return c
-
-def star(f):
-    return lambda t: f(*t)
 
 def print_cache(cache):
     items = sorted(cache.items(), key=star(lambda k, v: k[2:] + k[:2]))
