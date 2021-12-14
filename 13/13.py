@@ -26,7 +26,7 @@ def read_input(fname: str):
 
     maxrow = max(coords, key=lambda t: t[0])[0] + 1
     maxcol = max(coords, key=lambda t: t[1])[1] + 1
-    m = np.zeros((maxrow, maxcol), dtype=np.int32)
+    m = np.zeros((maxrow, maxcol), dtype=np.bool8)
     for r, c in coords:
         m[r, c] = 1
     return folds, m
@@ -54,28 +54,22 @@ def zero_extend(desired, mat):
     else:
         assert "huh?"
 
-
     return np.append(
         mat, 
-        np.zeros((zrows, zcols), dtype=np.int32),
+        np.zeros((zrows, zcols), dtype=np.bool8),
         axis=axis)
 
 def flip_at_row(mat, r):
     upper = mat[0 : r, :]
     lower = mat[r+1 :, :]
 
-    newm = upper + np.flipud(zero_extend(upper.shape, lower))
-    newm[newm > 0] = 1
-
-    return newm
+    return upper | zero_extend(upper.shape, lower)[::-1, :]
 
 def flip_at_col(mat, c):
     left = mat[:, 0 : c]
     right = mat[:, c+1 :]
 
-    newm = left + np.fliplr(zero_extend(left.shape, right))
-    newm[newm > 0] = 1
-    return newm
+    return left | zero_extend(left.shape, right)[:, ::-1]
 
 flips = {
     "row": flip_at_row,
