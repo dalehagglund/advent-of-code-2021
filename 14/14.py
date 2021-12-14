@@ -40,9 +40,7 @@ def part1(fname: str):
     for i in range(10):
         poly = step(poly, rules)
 
-    counts = Counter(poly)
-    seq = counts.most_common()
-    first, *_, last = seq
+    first, *_, last = Counter(poly).most_common()
     print(f'part1: {first[1] - last[1]}')
 
 def counts(cache, rules, depth, c1, c2):
@@ -99,8 +97,7 @@ def part2(fname: str):
             c.update(cache[ (*right, depth) ])
             c[right[0]] -= 1
 
-    seq = c.most_common()
-    first, *_, last = seq
+    first, *_, last = c.most_common()
     print(f'part1: {first[1] - last[1]}')
 
 if __name__ == '__main__':
