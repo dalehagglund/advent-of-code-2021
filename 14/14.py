@@ -1,9 +1,8 @@
-import itertools
-
 import sys
 import typing as ty
 from dataclasses import dataclass, field
 from enum import auto, Enum
+import itertools
 from itertools import tee, chain
 from collections import Counter
 
@@ -15,6 +14,10 @@ def pairwise(iterable):
     next(b, None)
     return zip(a, b)
 
+# add left and right sentinels to an iterator
+def sentinels(items, left=None, right=None):
+    return chain([left], items, [right])
+
 def read_input(fname:str):
     with open(fname) as f:
         alphabet = set()
@@ -25,16 +28,13 @@ def read_input(fname:str):
             left, right = line.strip().split(" -> ")
             alphabet.update(left)
             alphabet.update(right)
-            substitutions[left] = right
             substitutions[tuple(left)] = right
         return frozenset(alphabet), template, substitutions
 
 def step(poly: str, rules) -> str:
     result = []
     for c1, c2 in pairwise(poly):
-        ins = rules.get(c1 + c2, '')
-        assert ins != ''
-        result.extend([c1, rules.get(c1 + c2, '')])
+        result.extend([c1, rules[ (c1, c2) ]])
     result.append(poly[-1])
     return "".join(result)
         
@@ -72,32 +72,26 @@ def print_cache(cache):
 
 def part2(fname: str):
     alphabet, poly, rules = read_input(fname)
-    depth = 40
+    alphapairs = list(itertools.product(alphabet, repeat=2))
 
     cache = {}
-    alphapairs = list(itertools.product(alphabet, repeat=2))
-    for depth in range(0, depth + 1):
+    for depth in range(0, 41):
         for c1, c2 in alphapairs:
             cache[ (c1, c2, depth) ] = counts(cache, rules, depth, c1, c2)
 
-    pairs = pairwise(chain(
-        [None], 
-        ("".join(p) for p in pairwise(poly)),
-        [None],
-    ))
-
-    c: Counter = Counter()
+    pairs = pairwise(sentinels(map("".join, pairwise(poly)))) 
+    counter: Counter = Counter()
     for left, right in pairs:
         if left is None:
-            c.update(cache[ (*right, depth) ])
+            counter.update(cache[ (*right, depth) ])
         elif right is None:
             pass
         else:
-            c.update(cache[ (*right, depth) ])
-            c[right[0]] -= 1
+            counter.update(cache[ (*right, depth) ])
+            counter[right[0]] -= 1
 
-    first, *_, last = c.most_common()
-    print(f'part1: {first[1] - last[1]}')
+    first, *_, last = counter.most_common()
+    print(f'part2: {first[1] - last[1]}')
 
 if __name__ == '__main__':
     part1(sys.argv[1])
