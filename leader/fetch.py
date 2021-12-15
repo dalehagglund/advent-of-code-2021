@@ -17,36 +17,36 @@ def board_url(config, id) -> str:
     year = config['fetch']['year']
     return template.format(year=year, id=id)
 
+def fetch_board(config, board):
+    id = int(config['boards'][board])
+    url = board_url(config, id)
+    session = config['fetch']['session']
+    cookies = {'session': session}
+
+    r = requests.get(url, cookies=cookies)
+    if r.status_code != 200:
+        print(f"bad status: {r.status_code}", file=sys.stderr)
+        exit(1)
+    if not r.text.startswith('{'):
+        head = "\n".join(r.text.split("\n")[:25])
+        print(f"bad response: {head}", file=sys.stderr)
+        exit(1)
+    return r.json()
+
+def save_json(j, dest):
+    with open(dest, "w") as f:
+        print(json.dumps(j, indent=4), file=f)
+
 config = read_config("leaders.ini")
 for section in 'fetch boards'.split():
     if section not in config:
         warn(f"fetch: no [{section}] section in leaders.ini")
         exit(1)
 
-year = 2021
-board = sys.argv[1]
-id = int(config['boards'][board])
-session = config['fetch']['session']
+for board in sys.argv[1:]:
+    print(f"fetching {board} ...")
+    j = fetch_board(config, board)
 
-url = board_url(config, id)
-dest = f'data/{board}.json'
-
-print(f"year {year} board {board}")
-print(f"from {url}")
-print(f"session {session}")
-print(f"dest {dest}")
-
-cookies = {'session': session}
-r = requests.get(url, cookies=cookies)
-if r.status_code != 200:
-    print(f"bad status: {r.status_code}", file=sys.stderr)
-    exit(1)
-
-if not r.text.startswith('{'):
-    head = "\n".join(r.text.split("\n")[:25])
-    print(f"bad response: {head}", file=sys.stderr)
-    exit(1)
-
-j = r.json()
-with open(dest, "w") as f:
-    print(json.dumps(j, indent=4), file=f)
+    dest = f'data/{board}.json'
+    print(f'writing to {dest} ...')
+    save_json(j, dest)
