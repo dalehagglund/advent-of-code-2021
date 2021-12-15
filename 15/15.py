@@ -67,6 +67,7 @@ def neighbours(grid, row, col) -> ty.Iterable[ty.Tuple[int, int]]:
 
 def find_safest(costs, start, end):
     nrow, ncol = costs.shape
+    print(f'{costs.shape = } {start = } {end = }')
 
     nodes = np.empty(costs.shape, dtype=np.dtype('object'))
     open = PrioQueue()
@@ -97,8 +98,8 @@ def find_safest(costs, start, end):
         # if maxiter == 0: break
         # maxiter -= 1
         itercount += 1
-        trace(f'open:   ', [ (n.loc, n.cost_estimate()) for _, _, n in open._heap ])
-        trace(f'closed: ', sorted(closed))
+        # trace(f'open:   ', [ (n.loc, n.cost_estimate()) for _, _, n in open._heap ])
+        # trace(f'closed: ', sorted(closed))
 
         cur = open.pop()
         trace(f">>> pop {cur}")
