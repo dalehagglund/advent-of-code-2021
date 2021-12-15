@@ -46,17 +46,19 @@ def part1(fname: str):
     first, *_, last = Counter(poly).most_common()
     print(f'part1: {first[1] - last[1]}')
 
+def accumulate_sum(accum, counter, extra):
+    accum.update(counter)
+    accum[extra] -= 1
+    return accum
+
 def counts(cache, rules, depth, c1, c2):
-    if depth == 0:
-        return Counter(c1 + c2)
-
+    if depth == 0: return Counter(c1 + c2)
     ins = rules[(c1, c2)]
-    c = Counter()
-    c.update(cache[ (c1, ins, depth-1) ] )
-    c.update(cache[ (ins, c2, depth-1) ] )
-    c[ins] -= 1
-
-    return c
+    return accumulate_sum(
+        cache[ (c1, ins, depth-1) ].copy(),
+        cache[ (ins, c2, depth-1) ],
+        ins
+    )
 
 def print_cache(cache):
     items = sorted(cache.items(), key=star(lambda k, v: k[2:] + k[:2]))
@@ -64,9 +66,7 @@ def print_cache(cache):
         print(
             f'   {k} -> ',
             " ".join(
-                f'{count}{char}'
-                for char, count
-                in sorted(v.items())
+                f'{count}{char}' for char, count in sorted(v.items())
             )
         )
 
@@ -79,18 +79,12 @@ def part2(fname: str):
         for c1, c2 in alphapairs:
             cache[ (c1, c2, depth) ] = counts(cache, rules, depth, c1, c2)
 
-    pairs = pairwise(sentinels(map("".join, pairwise(poly)))) 
-    counter: Counter = Counter()
-    for left, right in pairs:
-        if left is None:
-            counter.update(cache[ (*right, depth) ])
-        elif right is None:
-            pass
-        else:
-            counter.update(cache[ (*right, depth) ])
-            counter[right[0]] -= 1
+    polypairs = [poly[i : i+2] for i in range(len(poly) - 1)]
+    sum = cache[ (*polypairs[0], depth) ].copy()
+    for left, right in pairwise(polypairs):
+        accumulate_sum(sum, cache[ (*right, depth) ], right[0])
 
-    first, *_, last = counter.most_common()
+    first, *_, last = sum.most_common()
     print(f'part2: {first[1] - last[1]}')
 
 if __name__ == '__main__':
