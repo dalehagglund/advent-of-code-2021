@@ -7,6 +7,7 @@ import sys
 import heapq as hq
 from itertools import count
 import time
+import math
 
 def read_input(fname: str):
     with open(fname) as f:
@@ -24,6 +25,19 @@ def neighbours(grid, row, col) -> ty.Iterable[ty.Tuple[int, int]]:
     if 0 < col: yield (row, col - 1)
     if col < ncol - 1: yield (row, col + 1)
 
+class StopWatch:
+    def __init__(self, timesource=None):
+        self._now: ty.Callable[[], float] = timesource or time.perf_counter
+        self._start: float = self._now()
+        self._prevlap: float = self._start
+    def elapsed(self) -> float:
+        return self._now() - self._start
+    def lap(self) -> float:
+        now = self._now()
+        laptime = now - self._prevlap
+        self._prevlap = now
+        return laptime
+
 #
 # This is translated directly from the description of Dijkstra's
 # algorithm for finding a least cost spanning tree rooted at a given
@@ -31,7 +45,7 @@ def neighbours(grid, row, col) -> ty.Iterable[ty.Tuple[int, int]]:
 # Skiena
 #
 
-def dijkstra(costs, start):
+def dijkstra(costs, start, end):
     nrow, ncol = costs.shape
     print(f'dijkstra: {costs.shape = } {start = }')
     maxint = np.iinfo(np.int32).max
@@ -41,17 +55,41 @@ def dijkstra(costs, start):
     distance = np.full_like(costs, fill_value=maxint)
     parent = np.full_like(costs, fill_value=None, dtype=np.dtype('object'))
 
+    timer = StopWatch()
     dist = None
     distance[start] = 0
     v = start
 
+    def dist_to(p, q):
+        x0, y0 = p
+        x1, y1 = q
+        return math.sqrt((x0 - x1)**2 + (y0 - y1)**2)
+
+    def progress(tag, iters, coord):
+        print(" ".join([
+            f'... {timer.lap():.3f} iters {iters:>6}',
+            f'coord {coord}',
+            f'pathc {distance[coord]}',
+            f'dstart {dist_to(start, coord):.1f}',
+            f'dend {dist_to(end, coord):.1f}',
+        ]))
+
+    every = 2500
+    loops = 0
+
     while not intree[v]:
+        loops += 1
+        if loops % every == 0:
+            progress('' if v != end else 'end!', loops, v)
+
         intree[v] = True
         if v != start:
-            # never entered on first iteration when
-            # dist and parent[v] might not be
-            # defined. for later iterations, they've been
-            # calculated below
+            # because this loop is only entered on the 
+            # second and subsequent iterations, the 
+            # values `dist` and `parent[v]` have already
+            # been computed by the previous iteration
+            # and so it only *looks* like we
+            # might be accessing undefined variables
 
             # print(f'adding edge {parent[v]} -> {v} to mst')
             weight += dist   
@@ -82,16 +120,13 @@ def dijkstra(costs, start):
     return parent, distance
     
 def find_safest(costs, start, end):
-    parent, dist = dijkstra(costs, start)
+    parent, dist = dijkstra(costs, start, end)
     return dist[end]
 
 def part1(fname: str):
     print("=" * 10, "part 1")
     grid = read_input(fname)
     nrow, ncol = grid.shape
-
-    print(grid.shape)
-    print(grid)
 
     best = find_safest(grid, (0, 0), (nrow - 1, ncol - 1))
     print(f'part1: {best}')
