@@ -38,6 +38,20 @@ class StopWatch:
         self._prevlap = now
         return laptime
 
+def dist_to(p, q):
+    x0, y0 = p
+    x1, y1 = q
+    return math.sqrt((x0 - x1)**2 + (y0 - y1)**2)
+
+def progress(tag, n, coord, distance, timer=None):
+    print(" ".join([
+        f'... {timer.lap():.3f} iters {n:>6}',
+        f'coord {coord}',
+        f'pathc {distance[coord]}',
+        # f'dstart {dist_to(start, coord):.1f}',
+        # f'dend {dist_to(end, coord):.1f}',
+    ]))
+
 #
 # This is translated directly from the description of Dijkstra's
 # algorithm for finding a least cost spanning tree rooted at a given
@@ -60,27 +74,23 @@ def dijkstra(costs, start, end):
     distance[start] = 0
     v = start
 
-    def dist_to(p, q):
-        x0, y0 = p
-        x1, y1 = q
-        return math.sqrt((x0 - x1)**2 + (y0 - y1)**2)
-
-    def progress(tag, iters, coord):
-        print(" ".join([
-            f'... {timer.lap():.3f} iters {iters:>6}',
-            f'coord {coord}',
-            f'pathc {distance[coord]}',
-            f'dstart {dist_to(start, coord):.1f}',
-            f'dend {dist_to(end, coord):.1f}',
-        ]))
-
     every = 2500
     loops = 0
+
+    # (INV) a key invariant of dijkstra's algorithm is that
+    # every node v which is already in the least-cost spanning
+    # tree has it's correct least cost assigned (and it's
+    # correct parent).
+
+    # let's define the "fringe" as the set of nodes 
+    # not currently in the tree with finite least-cost
+    # path estimates. that is, they're the non-tree
+    # nodes adjacent to some node in the tree.
 
     while not intree[v]:
         loops += 1
         if loops % every == 0:
-            progress('' if v != end else 'end!', loops, v)
+            progress('' if v != end else 'end!', loops, v, distance, timer)
 
         intree[v] = True
         if v != start:
@@ -91,14 +101,49 @@ def dijkstra(costs, start, end):
             # and so it only *looks* like we
             # might be accessing undefined variables
 
+            # Skiena's code originally returned the final value
+            # of weight, but that was because it was modelled
+            # on Prim's algorithm which calculates a spanning
+            # tree with minimum total edge weight.
+
             # print(f'adding edge {parent[v]} -> {v} to mst')
             weight += dist   
 
+        # check all neighbours, even those in the least-cost
+        # spanning tree being built and see if we've discovered
+        # a new shortest path to them.
+        #
+        # note that, by INV above, any neighbours already in the tree
+        # cannot have their distance reduced because it already
+        # at the correct minimum, and so it does not matter
+        # whether or not we skip them before the check for an
+        # improved distance.
+
         coords = neighbours(costs, *v)
-        for coord in coords:
-            if distance[coord] > distance[v] + costs[coord]:
-                distance[coord] = distance[v] + costs[coord]
-                parent[coord] = v
+        for c in coords:
+            if distance[c] > distance[v] + costs[c]:
+                assert not intree[c], "invariant violation"
+                distance[c] = distance[v] + costs[c]
+                parent[c] = v
+
+        # at this point, the node in the fringe with the
+        # minimum assigned least cost path has it's correct
+        # value and path computed.  
+
+        # the remainder of the code finds that node, and sets it
+        # up as `v` so that the next iteration of the loop moves
+        # it into the tree.
+
+        # select the node *not in the spanning tree* with the 
+        # smallest least-cost path to it. note that some of the 
+        # nodes updated in the previous step might have been in
+        # spanning tree and so are *not* eligible for selection here.
+        #
+        # but, I'm not sure *why* we don't have to revisit nodes that
+        # have had their shortest paths have been reduced even if they 
+        # were already in the tree. I think it has something to do
+        # with the fact that we can only select nodes that are 
+        # logically on the fringe of the current spanning tree.
 
         o = np.argmin(np.where(~intree, distance, maxint), axis=None)
         v = np.unravel_index(o, distance.shape)
