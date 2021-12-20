@@ -97,7 +97,11 @@ def observe(f, s):
 def part1(fname: str):
     print("===== part 1")
     box = read_input(fname)
+    hitcount = 0
     print(f'{box}')
+    def inc_hitcount(*args):
+        nonlocal hitcount
+        hitcount += 1
 
     s = grid_velocities(0, box.xmax + 1, box.ymin, -box.ymin + 1)
     # s = every(partial(print, '... n:'), 500, s)
@@ -106,13 +110,11 @@ def part1(fname: str):
     s = filter(star(lambda hit, _x, _y: hit), s)
     s = map(star(lambda _, vel, height: (vel, height)), s)
     s = every(partial(print, "... hit:"), 25, s)
+    s = observe(inc_hitcount, s)
 
     s = map(star(lambda _, ht: ht), s)
-    print(f'max height {max(s)}')
-
-def part2(fname: str):
-    print("===== part 2")
+    print(f'part 1: max height {max(s)}')
+    print(f'part 2: total velocities {hitcount}')
 
 if __name__ == '__main__':
     part1(sys.argv[1])
-    part2(sys.argv[1])
