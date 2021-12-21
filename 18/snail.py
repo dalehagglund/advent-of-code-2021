@@ -2,14 +2,14 @@ from functools import partial
 from itertools import starmap
 import sys
 import typing as ty
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import re
 import unittest
 from abc import ABC, abstractmethod
 
 @dataclass
 class Node(ABC):
-    parent: ty.Union['Node', None]
+    parent: ty.Optional['Node'] = field(repr=False)
 
     @abstractmethod
     def _format_iter(self): ...
@@ -38,7 +38,7 @@ def format_pair(r: Node, sep=" ") -> str:
     return sep.join(r._format_iter())
 
 def parse_pairs(s: str) -> Pair:
-    tokens = re.split(r'(\[|\]|, *)', s)
+    tokens = re.split(r'(\[|\]|,| +)', s)
     stack = []
 
     for tk in tokens:    
@@ -47,6 +47,8 @@ def parse_pairs(s: str) -> Pair:
         elif tk == "[":
             continue
         elif tk == ",":
+            continue
+        elif tk.isspace():
             continue
         elif tk == "]":
             right = stack.pop()
@@ -89,43 +91,74 @@ if __name__ == '__main__':
     sys.exit(0)
 
 def star(f): return lambda t: f(*t)
-def flip(f): return lambda t: f(*reversed(t))
+def flip(f): return lambda *t: f(*reversed(t))
 
-def walk_inorder(r: Node, depth=0) -> Node | None:
-    if isinstance(r, Pair):
-        yield from walk_inorder(r.left, depth+1)
+def walk_inorder(r: Node, withleaves=True, depth=0) -> Node | None:
+    if isinstance(r, Leaf):
+        if withleaves:
+            yield depth, r
+        return
+    
+    assert isinstance(r, Pair)
+    yield from walk_inorder(r.left, withleaves, depth+1)
     yield depth, r
-    if isinstance(r, Pair):
-        yield from walk_inorder(r.right, depth+1)
+    yield from walk_inorder(r.right, withleaves, depth+1)
 
-def find_leftmost_exploding(
+def find_leftmost_exploder(
     r: Node,
     depth: int = 4
 ) -> tuple[ Leaf | None, Pair, Leaf | None ]:
-    prev, pair, next = None, None, None
-
+    left, exploder, right = None, None, None
     isleaf = partial(flip(isinstance), Leaf)
 
-    s = walk_inorder(r)
+    s = walk_inorder(r, withleaves=False)
     for nodedepth, node in s:
-        if isinstance(node, Leaf):
-            prev = node
+        assert not isleaf(node)
+        if isleaf(node):
+            left = node
             continue
         if nodedepth == depth and isleaf(node.left) and isleaf(node.right):
-            pair = node
+            exploder = node
             break
 
-    if pair is None:
+    if exploder is None:
         return None, None, None
 
     for _, node in s:
         if isinstance(node, Leaf):
-            next = node
+            right = node
             break
     
-    return prev, pair, next
+    return left, exploder, right
 
-
+class ExplodingTests(unittest.TestCase):
+    def test_no_exploder_in_single_leaf(self):
+        r = parse_pairs("5")
+        left, exploder, right = find_leftmost_exploder(r)
+        self.assertIsNone(left)
+        self.assertIsNone(exploder)
+        self.assertIsNone(right)
+    def test_find_depth0_exploder(self):
+        r = parse_pairs("[2,3]")
+        left, exploder, right = find_leftmost_exploder(r, 0)
+        self.assertEqual(r, exploder)
+        self.assertIsNone(left)
+        self.assertIsNone(right)
+    def test_find_depth1_exploder(self):
+        r = parse_pairs('[[1, 2], 3]')
+        _, exploder, _ = find_leftmost_exploder(r, depth=1)
+        self.assertEqual(r.left, exploder)
+    def test_find_exploder(self):
+        r = parse_pairs("[[6,[5,[4,[3,2]]]],1]")
+        _, exploder, _ = find_leftmost_exploder(r)
+        self.assertEqual(3, exploder.left.value)
+        self.assertEqual(2, exploder.right.value)
+    def test_find_leftmost_exploder(self):
+        r = parse_pairs("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]")
+        _, exploder, _ = find_leftmost_exploder(r)
+        self.assertEqual(7, exploder.left.value)
+        self.assertEqual(3, exploder.right.value)
+        
 class SplitTests(unittest.TestCase):
     def test_find_simple_split_on_the_left(self):
         p = parse_pairs('[10,0]')
