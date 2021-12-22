@@ -180,7 +180,8 @@ class ExplodingTests(unittest.TestCase):
             (1, "[1, [2, 3]]", 1),
             (2, "[0, [7, [2, 3]]]", 7),
             (None, "[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]", 1),
-            (1, "[[1, [2, 3]], [4,5]]", 3)
+            (1, "[[1, [2, 3]], [4,5]]", 3),
+            (1, "[[[0, 1], [2, 3]], [4,5]]", 3)
         ]
         for depth, s, expected in examples:
             left, _, _ = first_exploder(parse_pairs(s), depth=depth)
