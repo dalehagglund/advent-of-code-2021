@@ -210,7 +210,7 @@ class CubeNode(CubeTree):
         self._expanded = True
     def _update_children(self, region: Cuboid):
         for child in self._children:
-            subregion = child._box.intersect(region)
+            subregion = child._box.intersection(region)
             if not subregion:
                 continue
             child.switch_on(subregion)
@@ -218,7 +218,10 @@ class CubeNode(CubeTree):
     def box(self): return self._box
     def on_count(self): return self._oncount
     def off_count(self): return self._box.volume() - self._oncount
-
+    def height(self):
+        if not self._expanded:
+            return 1
+        return 1 + max(c.height() for c in self._children)
 
 def flip(f): return lambda *args: f(*reversed(args))
 
@@ -244,6 +247,8 @@ if __name__ == '__main__':
     exit(0)
 
 class CubeNodeTests(unittest.TestCase):
+    def make_node(self, *bounds):
+        return CubeNode(Cuboid.from_bounds(*bounds))
     def test_new_node_unlit(self):
         cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10)
         node = CubeNode(cube)
@@ -260,6 +265,21 @@ class CubeNodeTests(unittest.TestCase):
         node = CubeNode(cube)
         node.switch_on(cube)
         self.assertEqual(cube.volume(), node.on_count())
+    def test_large_expand(self):
+        node = self.make_node(0, 127, 0, 127, 0, 127)
+        node._expand_children()
+        self.assertTrue(node._expanded)
+        self.assertEqual(8, len(node._children))
+        for c in node._children:
+            self.assertIsInstance(c, CubeNode)
+        self.assertEquals(2, node.height())
+    def test_light_entire_subcube(self):
+        node = self.make_node(0, 127, 0, 127, 0, 127)
+        subcube = node.box().split()[0]
+        node.switch_on(subcube)
+        self.assertEquals(subcube.volume(), node.on_count())
+        self.assertEqual(2, node.height())
+
 
 class IntersectionTests(unittest.TestCase):
     def test_bounds_has(self):
@@ -339,8 +359,22 @@ class SplitTests(unittest.TestCase):
         self.assertEqual(b.max, b2.max)
         self.assertEqual(b2.min, b1.max + 1)
         self.assertTrue(b.min < b1.max < b2.min < b.max)
-    # def test_cuboid_splitting(self):
-    #     b = Bounds(0, 31)
-    #     cube = Cuboid(b, b, b)
-    #     for c in cube.split():
-    #         print(c)
+    def test_cuboid_splitting(self):
+        b = Bounds(0, 31)
+        cube = Cuboid(b, b, b)
+        splits = set(cube.split())
+        self.assertEqual(8, len(splits))
+        for expected in [
+            ( 0, 15,  0, 15,  0, 15),
+            ( 0, 15,  0, 15, 16, 31),
+            ( 0, 15, 16, 31,  0, 15),
+            ( 0, 15, 16, 31, 16, 31),
+            (16, 31,  0, 15,  0, 15),
+            (16, 31,  0, 15, 16, 31),
+            (16, 31, 16, 31,  0, 15),
+            (16, 31, 16, 31, 16, 31),
+        ]:
+            c = Cuboid.from_bounds(*expected)
+            self.assertIn(c, splits)
+            splits.remove(c)
+        self.assertEquals(0, len(splits))
