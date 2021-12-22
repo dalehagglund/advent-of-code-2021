@@ -138,13 +138,6 @@ def first_exploder(
     
     return left, exploder, right
 
-def part1(fname: str):
-    pass
-
-if __name__ == '__main__':
-    part1(sys.argv[1])
-    sys.exit(0)
-
 def explode_node(left: Leaf | None, node: Pair, right: Leaf | None):
     if left:
         left.value += node.left.value
@@ -158,6 +151,14 @@ def explode_node(left: Leaf | None, node: Pair, right: Leaf | None):
         parent.right = Leaf(parent, 0)
     else:
         assert False, f'neither left nor right? {parent=} {node=}'
+
+def part1(fname: str):
+    pass
+
+if __name__ == '__main__':
+    part1(sys.argv[1])
+    sys.exit(0)
+
     
 class ExplodeNodeTests(unittest.TestCase):
     def test_explode(self):
