@@ -158,13 +158,6 @@ def explode_node(left: Leaf | None, node: Pair, right: Leaf | None):
     else:
         assert False, f'neither left nor right? {parent=} {node=}'
 
-def part1(fname: str):
-    pass
-
-if __name__ == '__main__':
-    part1(sys.argv[1])
-    sys.exit(0)
-
 def try_explode(n: Pair) -> bool:
     left, node, right = first_exploder(n)
     if not node:
@@ -179,6 +172,13 @@ def try_split(n: Pair) -> bool:
     split_node(node)
     return True
         
+def part1(fname: str):
+    pass
+
+if __name__ == '__main__':
+    part1(sys.argv[1])
+    sys.exit(0)
+
 class MagnitudeTests(unittest.TestCase):
     def test_leaf(self):
         node = Leaf(None, 7)
@@ -189,6 +189,18 @@ class MagnitudeTests(unittest.TestCase):
     def test_pair19(self):
         node = Pair(None, Leaf(None, 1), Leaf(None, 9))
         self.assertEqual(21, node.magnitude())
+    def test_example_magnitudes(self):
+        examples = [
+            ([[1,2],[[3,4],5]], 143),
+            ([[[[0,7],4],[[7,8],[6,0]]],[8,1]], 1384),
+            ([[[[1,1],[2,2]],[3,3]],[4,4]], 445),
+            ([[[[3,0],[5,3]],[4,4]],[5,5]], 791),
+            ([[[[5,0],[7,4]],[5,5]],[6,6]], 1137),
+            ([[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]], 3488),
+        ]
+        for input, expected in examples:
+            node = parse_pairs(str(input))
+            self.assertEqual(expected, node.magnitude())
 
 class ReductionTests(unittest.TestCase):
     def test_reduction_example(self):
