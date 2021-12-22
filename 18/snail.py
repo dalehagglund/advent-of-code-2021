@@ -60,7 +60,7 @@ def parse_pairs(s: str) -> Pair:
     assert len(stack) == 1
     return stack[0]
 
-def find_leftmost_split(r: Node) -> Leaf:
+def first_split(r: Node) -> Leaf:
     s = walk_inorder(r)
     s = starmap(lambda _, r: r, s)
     s = filter(lambda r: isinstance(r, Leaf), s)
@@ -104,98 +104,129 @@ def walk_inorder(r: Node, withleaves=True, depth=0) -> Node | None:
     yield depth, r
     yield from walk_inorder(r.right, withleaves, depth+1)
 
-def find_leftmost_exploder(
+def first_exploder(
     r: Node,
-    depth: int = 4
+    depth: int = None
 ) -> tuple[ Leaf | None, Pair, Leaf | None ]:
     left, exploder, right = None, None, None
     isleaf = partial(flip(isinstance), Leaf)
 
+    if depth is None:
+        depth = 4
+
+    def explodable(d, n):
+        return (
+            d == depth and
+            isleaf(node.left) and
+            isleaf(node.right)
+        )
+
     s = walk_inorder(r, withleaves=False)
-    for nodedepth, node in s:
+    for d, node in s:
         assert not isleaf(node)
-        if isleaf(node):
-            left = node
-            continue
-        if nodedepth == depth and isleaf(node.left) and isleaf(node.right):
+        if explodable(d, node):
             exploder = node
             break
+        if isleaf(node.right):
+            left = node.right
+        elif isleaf(node.left):
+            left = node.left
 
     if exploder is None:
         return None, None, None
 
-    for _, node in s:
-        if isinstance(node, Leaf):
-            right = node
-            break
+    # for _, node in s:
+    #     if isinstance(node, Leaf):
+    #         right = node
+    #         break
     
     return left, exploder, right
 
 class ExplodingTests(unittest.TestCase):
     def test_no_exploder_in_single_leaf(self):
         r = parse_pairs("5")
-        left, exploder, right = find_leftmost_exploder(r)
+        left, exploder, right = first_exploder(r)
         self.assertIsNone(left)
         self.assertIsNone(exploder)
         self.assertIsNone(right)
     def test_find_depth0_exploder(self):
         r = parse_pairs("[2,3]")
-        left, exploder, right = find_leftmost_exploder(r, 0)
+        left, exploder, right = first_exploder(r, 0)
         self.assertEqual(r, exploder)
         self.assertIsNone(left)
         self.assertIsNone(right)
     def test_find_depth1_exploder(self):
         r = parse_pairs('[[1, 2], 3]')
-        _, exploder, _ = find_leftmost_exploder(r, depth=1)
+        _, exploder, _ = first_exploder(r, depth=1)
         self.assertEqual(r.left, exploder)
-    def test_find_exploder(self):
+    def test_find_only_at_requested_depth(self):
+        r = parse_pairs('[ [ [1, 2], [3, 4] ], [ 5, 6] ]')
+        _, exploder, _ = first_exploder(r, depth=1)
+        self.assertEqual(5, exploder.left.value)
+        self.assertEqual(6, exploder.right.value)
+    def test_find_exploder_ex1(self):
         r = parse_pairs("[[6,[5,[4,[3,2]]]],1]")
-        _, exploder, _ = find_leftmost_exploder(r)
+        _, exploder, _ = first_exploder(r)
         self.assertEqual(3, exploder.left.value)
         self.assertEqual(2, exploder.right.value)
-    def test_find_leftmost_exploder(self):
+    def test_find_exploder_ex2(self):
         r = parse_pairs("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]")
-        _, exploder, _ = find_leftmost_exploder(r)
+        _, exploder, _ = first_exploder(r)
         self.assertEqual(7, exploder.left.value)
         self.assertEqual(3, exploder.right.value)
+    def test_correct_predecessor(self):
+        examples = [
+            (1, "[1, 2]", None),
+            (1, "[1, [2, 3]]", 1),
+            (2, "[0, [7, [2, 3]]]", 7),
+            (None, "[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]", 1),
+            (1, "[[1, [2, 3]], [4,5]]", 3)
+        ]
+        for depth, s, expected in examples:
+            left, _, _ = first_exploder(parse_pairs(s), depth=depth)
+            if expected is None:
+                self.assertIsNone(left, s)
+            else:
+                self.assertIsNotNone(left, s)
+                self.assertEqual(expected, left.value, s)
         
 class SplitTests(unittest.TestCase):
     def test_find_simple_split_on_the_left(self):
         p = parse_pairs('[10,0]')
         self.assertEqual(
             p.left, 
-            find_leftmost_split(p)
+            first_split(p)
         )
     def test_find_simple_split_on_the_right(self):
         p = parse_pairs('[0,10]')
         self.assertEqual(
             p.right,
-            find_leftmost_split(p)
+            first_split(p)
         )
     def test_simple_split(self):
         p = parse_pairs("[10,0]")
-        split_node(find_leftmost_split(p))
+        split_node(first_split(p))
         self.assertEqual(
             "[[5,5],0]",
             format_pair(p, "")
         )
     def test_interior_split_a(self):
         p = parse_pairs('[[0,10],[0,0]]')
-        split_node(find_leftmost_split(p))
+        split_node(first_split(p))
         self.assertEqual(
             '[[0,[5,5]],[0,0]]',
             format_pair(p, "")
         )
     def test_interior_split_b(self):
         p = parse_pairs('[[0,0],[10,0]]')
-        split_node(find_leftmost_split(p))
+        split_node(first_split(p))
         self.assertEqual(
             '[[0,0],[[5,5],0]]',
             format_pair(p, "")
         )
     def test_find_correct_split(self):
         p = parse_pairs('[[0,10],[10,0]]')
-        split_node(find_leftmost_split(p))
+        split_node(first_split(p))
         self.assertEqual(
             '[[0,[5,5]],[10,0]]',
             format_pair(p, "")
