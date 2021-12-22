@@ -76,6 +76,8 @@ class Cuboid:
         xb = self.xb.intersection(other.xb)
         yb = self.yb.intersection(other.yb)
         zb = self.zb.intersection(other.zb)
+        if not xb or not yb or not zb:
+            return None
         return Cuboid(xb, yb, zb)
     def split(self) -> list['Cuboid']:
         xbs = self.xb.split()
@@ -258,8 +260,6 @@ class CubeNodeTests(unittest.TestCase):
         node = CubeNode(cube)
         node.switch_on(cube)
         self.assertEqual(cube.volume(), node.on_count())
-    def test_more(self):
-        assert False, "needs more tests"
 
 class IntersectionTests(unittest.TestCase):
     def test_bounds_has(self):
@@ -302,7 +302,31 @@ class IntersectionTests(unittest.TestCase):
         self.assertEqual(cube, cube.intersection(b3))
 
     def test_cuboid_partial_overlap(self):
-        assert False, "finish this test!"
+        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10)
+        examples = [
+            [ (9, 11, 9, 11, 9, 11), (9, 10, 9, 10, 9, 10) ],
+            [ (-1, 1, -1, 1, -1, 1), (0, 1, 0, 1, 0, 1) ],
+        ]
+        for i, (rbounds, expbounds) in enumerate(examples):
+            region = Cuboid.from_bounds(*rbounds)
+            expected = Cuboid.from_bounds(*expbounds)
+            result = cube.intersection(region)
+            self.assertEqual(expected, result, f'case {i}')
+
+    def test_cuboid_no_overlap(self):
+        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10)
+        examples = [
+            (11, 12, 11, 12, 11, 12),
+            (-2, -1, -2, -1, -2, -1),
+            (-2, -1, 3, 5, 3, 5),
+            (0, 10, -2, -1, 0, 10),
+            (2, 7, 2, 7, -2, -1),
+        ]
+        for i, rbounds in enumerate(examples):
+            region = Cuboid.from_bounds(*rbounds)
+            result = cube.intersection(region)
+            self.assertIsNone(result, f'case {i}')
+
 
 class SplitTests(unittest.TestCase):
     def test_bounds_splitting(self):
