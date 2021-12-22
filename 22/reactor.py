@@ -181,6 +181,27 @@ class CubeNode(CubeTree):
         self._children: list['CubeNode'] = None
         self._oncount = self._box.volume() if lit else 0 
 
+    def set(self, region: Cuboid, state: State):
+        pass
+
+    def switch_off(self, region: Cuboid):
+        assert self._box.contains(region)
+
+        if self._box == region and not self._expanded:
+            self._oncount = 0
+        elif self._box == region and self._expanded:
+            self._discard_children()
+            self._oncount  = 0
+        elif self._box != region and not self._expanded:
+            self._expand_children()
+            self._update_children(region)
+            self._oncount = sum(c.on_count() for c in self._children)
+        elif self._box != region and self._expanded:
+            self._update_children(region)
+            self._oncount = sum(c.on_count() for c in self._children)
+        else:
+            assert False, "huh? case analysis exhausted"
+
     def switch_on(self, region: Cuboid):
         assert self._box.contains(region)
 
@@ -265,6 +286,7 @@ class CubeNodeTests(unittest.TestCase):
         node = CubeNode(cube)
         node.switch_on(cube)
         self.assertEqual(cube.volume(), node.on_count())
+        self.assertEqual(0, node.off_count())
     def test_large_expand(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
         node._expand_children()
@@ -279,6 +301,23 @@ class CubeNodeTests(unittest.TestCase):
         node.switch_on(subcube)
         self.assertEquals(subcube.volume(), node.on_count())
         self.assertEqual(2, node.height())
+    def test_entire_cube_on_then_off(self):
+        node = self.make_node(0, 10, 0, 10, 0, 10)
+        node.switch_on(node.box())
+        node.switch_off(node.box())
+        self.assertEqual(node.box().volume(), node.off_count())
+        self.assertEqual(0, node.on_count())
+        self.assertEqual(1, node.height())
+    def test_toggle_subcube_on_then_off(self):
+        node = self.make_node(0, 10, 0, 10, 0, 10)
+        subcube = node.box().split()[0]
+        node.switch_on(subcube)
+        node.switch_off(subcube)
+        self.assertEqual(0, node.on_count())
+        self.assertEqual(1, node.height())
+        self.assertEqual(node.box().volume(), node.off_count())
+
+
 
 
 class IntersectionTests(unittest.TestCase):
