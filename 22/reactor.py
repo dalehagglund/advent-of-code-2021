@@ -71,7 +71,11 @@ class Cuboid:
             Bounds(ymin,ymax),
             Bounds(zmin,zmax),
         )
-
+    def intersection(self, other: 'Cuboid') -> ty.Optional['Cuboid']:
+        xb = self.xb.intersection(other.xb)
+        yb = self.yb.intersection(other.yb)
+        zb = self.zb.intersection(other.zb)
+        return Cuboid(xb, yb, zb)
     def split(self) -> list['Cuboid']:
         xbs = self.xb.split()
         ybs = self.yb.split()
@@ -81,7 +85,6 @@ class Cuboid:
             for xb, yb, zb
             in product(xbs, ybs, zbs)
         ]
-
     def contains(self, other: 'Cuboid'):
         return (
             self.xb.contains(other.xb) and
@@ -159,7 +162,7 @@ class CubeNode:
     def __init__(self, box: Cuboid, lit: bool):
         self._box = box
         self._expanded = False
-        self._children = None
+        self._children: list['CubeNode'] = None
         self._oncount = self._box.volume() if lit else 0 
 
     def switch_on(self, region: Cuboid):
@@ -177,7 +180,7 @@ class CubeNode:
                 for subbox in self._box.split()
             ]
             for child in self._children:
-                subregion = child.box().intersect(region)
+                subregion = child._box.intersect(region)
                 if not subregion:
                     continue
                 child.switch_on(subregion)
@@ -219,7 +222,7 @@ if __name__ == '__main__':
     exit(0)
 
 class IntersectionTests(unittest.TestCase):
-    def test_bounds_in(self):
+    def test_bounds_has(self):
         b = Bounds(0, 10)
         self.assertTrue(b.has(0))
         self.assertTrue(b.has(1))
@@ -240,6 +243,26 @@ class IntersectionTests(unittest.TestCase):
 
         self.assertEqual(b, b.intersection(b))
         self.assertEqual((0, 10), b.intersection((-15, 15)))
+
+    def test_cuboid_full_overlap(self):
+        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10) 
+        b1 = Cuboid.from_bounds(3, 3, 3, 3, 3, 3)
+        b2 = Cuboid.from_bounds(10, 10, 10, 10, 10, 10)
+
+        self.assertEqual(cube, cube.intersection(cube))
+        self.assertEqual(b1, cube.intersection(b1))
+    
+    def test_cuboid_with_larger(self):
+        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10) 
+        b3 = Cuboid.from_bounds(
+            -20, 20,
+            -20, 20,
+            -20, 20
+        )
+        self.assertEqual(cube, cube.intersection(b3))
+
+    def test_cuboid_partial_overlap(self):
+        assert False, "finish this test!"
 
 class SplitTests(unittest.TestCase):
     def test_bounds_splitting(self):
