@@ -1,4 +1,4 @@
-from functools import partial
+from functools import partial, reduce
 from itertools import starmap
 import sys
 import typing as ty
@@ -171,13 +171,65 @@ def try_split(n: Pair) -> bool:
         return False
     split_node(node)
     return True
+
+def add_pair(left: Node, right: Node) -> Node:
+    sum = Pair(None, left, right)
+    while try_explode(sum) or try_split(sum):
+        pass
+    return sum
+
+def read_input(fname: str) -> list[Node]:
+    with open(fname) as f:
+        return [
+            parse_pairs(line.strip())
+            for line in f
+        ]
         
 def part1(fname: str):
-    pass
+    pairs = read_input(fname)
+    sum = reduce(add_pair, pairs)
+    print(f'part 1: final magnitude {sum.magnitude()}')
 
 if __name__ == '__main__':
     part1(sys.argv[1])
     sys.exit(0)
+
+class AdditionTests(unittest.TestCase):
+    def test_addition_examples(self):
+        examples = [
+            (
+                [ [1,1], [2,2], [3,3], [4,4] ],
+                [[[[1,1],[2,2]],[3,3]],[4,4]],
+            ),
+            (
+                [[1,1], [2,2], [3,3], [4,4], [5,5]],
+                [[[[3,0],[5,3]],[4,4]],[5,5]],
+            ),
+            (
+                [[1,1], [2,2], [3,3], [4,4], [5,5], [6,6]],
+                [[[[5,0],[7,4]],[5,5]],[6,6]],
+            ),
+            (
+                [
+                    [[[0,[4,5]],[0,0]],[[[4,5],[2,6]],[9,5]]],
+                    [7, [[[3,7],[4,3]],[[6,3],[8,8]]]],
+                    [[2,[[0,8],[3,4]]],[[[6,7],1],[7,[1,6]]]],
+                    [[[[2,4],7],[6,[0,5]]],[[[6,8],[2,8]],[[2,1],[4,5]]]],
+                    [7,[5,[[3,8],[1,4]]]],
+                    [[2,[2,2]],[8,[8,1]]],
+                    [2,9],
+                    [1,[[[9,3],9],[[9,0],[0,7]]]],
+                    [[[5,[7,4]],7],1],
+                    [[[[4,2],2],6],[8,7]],
+                ],
+                [[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]
+            ),
+        ]
+        for input, sum in examples:
+            expected = parse_pairs(str(sum))
+            result = reduce(add_pair, map(parse_pairs, (str(s) for s in input)))
+            self.assertEqual(format_pair(expected), format_pair(result))
+        assert "finish this test!" 
 
 class MagnitudeTests(unittest.TestCase):
     def test_leaf(self):
