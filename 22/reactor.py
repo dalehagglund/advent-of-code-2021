@@ -8,6 +8,7 @@ from typing import NamedTuple
 from itertools import islice, product
 import unittest
 import typing as ty
+import abc
 
 # closed integer interval
 class Bounds(NamedTuple):
@@ -155,11 +156,24 @@ def part1(fname: str):
     count = np.sum(mat)
     print(f'part 1: lit {count}')
 
-class CubeLeaf:
+class CubeTree(abc.ABC):
+    @abc.abstractmethod
+    def switch_on(self, region: Cuboid): ...
+
+    @abc.abstractmethod
+    def box(self) -> Cuboid: ...
+
+    @abc.abstractmethod
+    def on_count(self) -> int: ...
+
+    @abc.abstractmethod
+    def off_count(self) -> int: ...
+
+class CubeLeaf(CubeTree):
     pass
 
-class CubeNode:
-    def __init__(self, box: Cuboid, lit: bool):
+class CubeNode(CubeTree):
+    def __init__(self, box: Cuboid, lit: bool = False):
         self._box = box
         self._expanded = False
         self._children: list['CubeNode'] = None
@@ -171,31 +185,37 @@ class CubeNode:
         if self._box == region and not self._expanded:
             self._oncount = self._box.volume()
         elif self._box == region and self._expanded:
-            self._children = None
-            self._expanded = False
+            self._discard_children()
             self._oncount  = self._box.volume()
         elif self._box != region and not self._expanded:
-            self._children = [
-                CubeNode(subbox, False)
-                for subbox in self._box.split()
-            ]
-            for child in self._children:
-                subregion = child._box.intersect(region)
-                if not subregion:
-                    continue
-                child.switch_on(subregion)
+            self._expand_children()
+            self._update_children(region)
             self._oncount = sum(c.on_count() for c in self._children)
         elif self._box != region and self._expanded:
-            for child in self._children:
-                subregion = child.intersect(region)
-                if not subregion:
-                    continue
-                child.switch_on(subregion)
+            self._update_children(region)
             self._oncount = sum(c.on_count() for c in self._children)
+        else:
+            assert False, "huh? case analysis exhausted"
+    
+    def _discard_children(self):
+        self._children = None
+        self._expanded = False
+    def _expand_children(self):
+        self._children = [
+            CubeNode(subbox, False)
+            for subbox in self._box.split()
+        ]
+        self._expanded = True
+    def _update_children(self, region: Cuboid):
+        for child in self._children:
+            subregion = child._box.intersect(region)
+            if not subregion:
+                continue
+            child.switch_on(subregion)
 
     def box(self): return self._box
     def on_count(self): return self._oncount
-    def off_count(self): return self._box.volume() - self._on_count
+    def off_count(self): return self._box.volume() - self._oncount
 
 
 def flip(f): return lambda *args: f(*reversed(args))
@@ -220,6 +240,26 @@ if __name__ == '__main__':
     part1(sys.argv[1])
     part2(sys.argv[1])
     exit(0)
+
+class CubeNodeTests(unittest.TestCase):
+    def test_new_node_unlit(self):
+        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10)
+        node = CubeNode(cube)
+        self.assertEqual(cube, node.box())
+        self.assertEqual(0, node.on_count())
+        self.assertEqual(cube.volume(), node.off_count())
+    def test_new_node_lit(self):
+        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10)
+        node = CubeNode(cube, lit=True)
+        self.assertEqual(cube.volume(), node.on_count())
+        self.assertEqual(0, node.off_count())
+    def test_light_entire_cube(self):
+        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10)
+        node = CubeNode(cube)
+        node.switch_on(cube)
+        self.assertEqual(cube.volume(), node.on_count())
+    def test_more(self):
+        assert False, "needs more tests"
 
 class IntersectionTests(unittest.TestCase):
     def test_bounds_has(self):
