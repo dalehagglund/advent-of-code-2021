@@ -1,9 +1,12 @@
+from functools import reduce
 import numpy as np
 from enum import Enum, auto
 import sys
 import re
 from dataclasses import dataclass
 from typing import NamedTuple
+from itertools import islice
+import abc
 
 # closed integer interval
 class Bounds(NamedTuple):
@@ -16,6 +19,11 @@ class Bounds(NamedTuple):
         return (
             smin <= other.min <= smax and
             smin <= other.max <= other.max
+        )
+    def extend_to(self, other: 'Bounds') -> 'Bounds':
+        return Bounds(
+            min(self.min, other.min),
+            max(self.max, other.max)
         )
 
 @dataclass(frozen=True)
@@ -44,6 +52,17 @@ class Cuboid:
             self.zb.contains(other.zb)
         )
 
+    def extend_to(self, other: 'Cuboid') -> 'Cuboid':
+        return Cuboid(
+            self.xb.extend_to(other.xb),
+            self.yb.extend_to(other.yb),
+            self.zb.extend_to(other.zb)
+        )
+
+    def volume(self) -> int:
+        return (
+            self.xb.length() * self.yb.length() * self.zb.length()
+        )
     def shape(self):
         return (
             self.xb.length(),
@@ -98,7 +117,29 @@ def part1(fname: str):
     count = np.sum(mat)
     print(f'part 1: lit {count}')
 
+class CubeTree
+
+def flip(f): return lambda *args: f(*reversed(args))
+
+def part2(fname: str):
+    instrs = read_input(fname)
+
+    cuboid = reduce(
+        lambda c1, c2: c1.extend_to(c2),
+        (inst[1] for inst in instrs))
+    max_set = sum(c.volume() for toggle, c in instrs if toggle == State.ON)
+    max_clear = sum(c.volume() for toggle, c in instrs if toggle == State.OFF)
+    print('max cuboid', cuboid)
+    print('volume', cuboid.volume())
+    print('max cells set', max_set)
+    print('max cells clear', max_set)
+    print('max set density', max_set / cuboid.volume())
+    print('max clear density', max_clear / cuboid.volume())
+    return 
+
+
+
 if __name__ == '__main__':
     part1(sys.argv[1])
-    # part2(sys.argv[1])
+    part2(sys.argv[1])
     exit(0)
