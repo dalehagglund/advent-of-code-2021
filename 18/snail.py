@@ -135,10 +135,12 @@ def first_exploder(
     if exploder is None:
         return None, None, None
 
-    # for _, node in s:
-    #     if isinstance(node, Leaf):
-    #         right = node
-    #         break
+    for _, node in s:
+        if isleaf(node.left):
+            right = node.left
+            break
+        elif isleaf(node.right):
+            right = node.right
     
     return left, exploder, right
 
@@ -190,6 +192,23 @@ class ExplodingTests(unittest.TestCase):
             else:
                 self.assertIsNotNone(left, s)
                 self.assertEqual(expected, left.value, s)
+    def test_correct_successor(self):
+        examples = [
+            (1, "[1, 2]", None),
+            (1, "[[2, 3], 4]", 4),
+            (2, "[0, [7, [2, 3]]]", None),
+            (2, "[0, [[2, 3], 7]]", 7),
+            (None, "[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]", 6),
+            (2, "[[1, [2, 3]], [4,5]]", 4),
+            (1, "[[4,5], [[0, 1], [2, 3]]]", 0)
+        ]
+        for depth, s, expected in examples:
+            _, _, right = first_exploder(parse_pairs(s), depth=depth)
+            if expected is None:
+                self.assertIsNone(right, s)
+            else:
+                self.assertIsNotNone(right, s)
+                self.assertEqual(expected, right.value, s)
         
 class SplitTests(unittest.TestCase):
     def test_find_simple_split_on_the_left(self):
