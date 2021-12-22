@@ -5,13 +5,15 @@ import sys
 import re
 from dataclasses import dataclass
 from typing import NamedTuple
-from itertools import islice
-import abc
+from itertools import islice, product
+import unittest
+import typing as ty
 
 # closed integer interval
 class Bounds(NamedTuple):
     min: int
     max: int
+
     def length(self):
         return self.max - self.min + 1
     def contains(self, other: 'Bounds') -> bool:
@@ -25,6 +27,31 @@ class Bounds(NamedTuple):
             min(self.min, other.min),
             max(self.max, other.max)
         )
+    def split(self) -> tuple['Bounds' ,'Bounds']:
+        mid = (self.max + self.min) // 2
+        return Bounds(self.min, mid), Bounds(mid + 1, self.max)
+    def intersection(self, other: 'Bounds') -> ty.Optional['Bounds']:
+        omin, omax = other
+
+        if omax < self.min: return None     # other to the left of self
+        if self.max < omin: return None     # other to the right of self
+
+        if omin <= self.min and self.max <= omax:
+            # other extends past both ends of self
+            return self
+        elif omin < self.min and self.has(omax):
+            # other overlaps overlaps left end of self
+            return Bounds(self.min, omax)
+        elif self.has(omin) and self.max < omax:
+            # other overlaps right end of self
+            return Bounds(omin, self.max)
+        elif self.has(omin) and self.has(omax):
+            # other fully within self
+            return other
+        else:
+            assert False, "huh? no case matches!"
+    def has(self, n: int) -> bool:
+        return self.min <= n <= self.max
 
 @dataclass(frozen=True)
 class Cuboid:
@@ -45,20 +72,28 @@ class Cuboid:
             Bounds(zmin,zmax),
         )
 
+    def split(self) -> list['Cuboid']:
+        xbs = self.xb.split()
+        ybs = self.yb.split()
+        zbs = self.zb.split()
+        return [
+            Cuboid(xb, yb, zb)
+            for xb, yb, zb
+            in product(xbs, ybs, zbs)
+        ]
+
     def contains(self, other: 'Cuboid'):
         return (
             self.xb.contains(other.xb) and
             self.yb.contains(other.yb) and
             self.zb.contains(other.zb)
         )
-
     def extend_to(self, other: 'Cuboid') -> 'Cuboid':
         return Cuboid(
             self.xb.extend_to(other.xb),
             self.yb.extend_to(other.yb),
             self.zb.extend_to(other.zb)
         )
-
     def volume(self) -> int:
         return (
             self.xb.length() * self.yb.length() * self.zb.length()
@@ -117,7 +152,48 @@ def part1(fname: str):
     count = np.sum(mat)
     print(f'part 1: lit {count}')
 
-class CubeTree
+class CubeLeaf:
+    pass
+
+class CubeNode:
+    def __init__(self, box: Cuboid, lit: bool):
+        self._box = box
+        self._expanded = False
+        self._children = None
+        self._oncount = self._box.volume() if lit else 0 
+
+    def switch_on(self, region: Cuboid):
+        assert self._box.contains(region)
+
+        if self._box == region and not self._expanded:
+            self._oncount = self._box.volume()
+        elif self._box == region and self._expanded:
+            self._children = None
+            self._expanded = False
+            self._oncount  = self._box.volume()
+        elif self._box != region and not self._expanded:
+            self._children = [
+                CubeNode(subbox, False)
+                for subbox in self._box.split()
+            ]
+            for child in self._children:
+                subregion = child.box().intersect(region)
+                if not subregion:
+                    continue
+                child.switch_on(subregion)
+            self._oncount = sum(c.on_count() for c in self._children)
+        elif self._box != region and self._expanded:
+            for child in self._children:
+                subregion = child.intersect(region)
+                if not subregion:
+                    continue
+                child.switch_on(subregion)
+            self._oncount = sum(c.on_count() for c in self._children)
+
+    def box(self): return self._box
+    def on_count(self): return self._oncount
+    def off_count(self): return self._box.volume() - self._on_count
+
 
 def flip(f): return lambda *args: f(*reversed(args))
 
@@ -137,9 +213,47 @@ def part2(fname: str):
     print('max clear density', max_clear / cuboid.volume())
     return 
 
-
-
 if __name__ == '__main__':
     part1(sys.argv[1])
     part2(sys.argv[1])
     exit(0)
+
+class IntersectionTests(unittest.TestCase):
+    def test_bounds_in(self):
+        b = Bounds(0, 10)
+        self.assertTrue(b.has(0))
+        self.assertTrue(b.has(1))
+        self.assertTrue(b.has(9))
+        self.assertTrue(b.has(10))
+        self.assertFalse(b.has(-1))
+        self.assertFalse(b.has(11))
+    
+    def test_bounds_intersection(self):
+        b = Bounds(0, 10)
+
+        self.assertIsNone(b.intersection((-5, -1)))
+        self.assertIsNone(b.intersection((11, 15)))
+
+        self.assertEqual((0, 1), b.intersection((-1, 1)))
+        self.assertEqual((2,5), b.intersection((2, 5)))
+        self.assertEqual((7, 10), b.intersection((7,15)))
+
+        self.assertEqual(b, b.intersection(b))
+        self.assertEqual((0, 10), b.intersection((-15, 15)))
+
+class SplitTests(unittest.TestCase):
+    def test_bounds_splitting(self):
+        b = Bounds(-10, 10)
+        b1, b2 = b.split()
+
+        self.assertEqual(b.length(), b1.length() + b2.length())
+        self.assertTrue(0 <= abs(b1.length() - b2.length()) <= 1)
+        self.assertEqual(b.min, b1.min)
+        self.assertEqual(b.max, b2.max)
+        self.assertEqual(b2.min, b1.max + 1)
+        self.assertTrue(b.min < b1.max < b2.min < b.max)
+    # def test_cuboid_splitting(self):
+    #     b = Bounds(0, 31)
+    #     cube = Cuboid(b, b, b)
+    #     for c in cube.split():
+    #         print(c)
