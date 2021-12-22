@@ -13,12 +13,16 @@ class Node(ABC):
 
     @abstractmethod
     def _format_iter(self): ...
+    @abstractmethod
+    def magnitude(self) -> int: ...
 
 @dataclass
 class Leaf(Node):
     value: int
     def _format_iter(self):
         yield str(self.value)
+    def magnitude(self):
+        return self.value
 
 @dataclass
 class Pair(Node):
@@ -33,6 +37,8 @@ class Pair(Node):
         yield ','
         yield from self.right._format_iter()
         yield ']'
+    def magnitude(self):
+        return 3 * self.left.magnitude() + 2 * self.right.magnitude()
 
 def format_pair(r: Node, sep=" ") -> str:
     return sep.join(r._format_iter())
@@ -159,6 +165,43 @@ if __name__ == '__main__':
     part1(sys.argv[1])
     sys.exit(0)
 
+def try_explode(n: Pair) -> bool:
+    left, node, right = first_exploder(n)
+    if not node:
+        return False
+    explode_node(left, node, right)
+    return True
+
+def try_split(n: Pair) -> bool:
+    node = first_split(n)
+    if not node:
+        return False
+    split_node(node)
+    return True
+        
+class MagnitudeTests(unittest.TestCase):
+    def test_leaf(self):
+        node = Leaf(None, 7)
+        self.assertEqual(7, node.magnitude())
+    def test_pair91(self):
+        node = Pair(None, Leaf(None, 9), Leaf(None, 1))
+        self.assertEqual(29, node.magnitude())
+    def test_pair19(self):
+        node = Pair(None, Leaf(None, 1), Leaf(None, 9))
+        self.assertEqual(21, node.magnitude())
+
+class ReductionTests(unittest.TestCase):
+    def test_reduction_example(self):
+        orig = [[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]
+        final = [[[[0,7],4],[[7,8],[6,0]]],[8,1]]
+
+        num = parse_pairs(str(orig))
+        final = parse_pairs(str(final))
+
+        while try_explode(num) or try_split(num):
+            pass
+        
+        self.assertEqual(format_pair(final, sep=""), format_pair(num, sep="")) 
     
 class ExplodeNodeTests(unittest.TestCase):
     def test_explode(self):
