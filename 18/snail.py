@@ -61,7 +61,7 @@ def parse_pairs(s: str) -> Pair:
     return stack[0]
 
 def first_split(r: Node) -> Leaf:
-    s = walk_inorder(r)
+    s = inorder_traversal(r)
     s = starmap(lambda _, r: r, s)
     s = filter(lambda r: isinstance(r, Leaf), s)
     s = filter(lambda r: r.value >= 10, s)
@@ -83,26 +83,19 @@ def split_node(n: Leaf):
     else:
         p.right = new 
 
-def part1(fname: str):
-    pass
-
-if __name__ == '__main__':
-    part1(sys.argv[1])
-    sys.exit(0)
-
 def star(f): return lambda t: f(*t)
 def flip(f): return lambda *t: f(*reversed(t))
 
-def walk_inorder(r: Node, withleaves=True, depth=0) -> Node | None:
+def inorder_traversal(r: Node, withleaves=True, depth=0) -> Node | None:
     if isinstance(r, Leaf):
         if withleaves:
             yield depth, r
         return
     
     assert isinstance(r, Pair)
-    yield from walk_inorder(r.left, withleaves, depth+1)
+    yield from inorder_traversal(r.left, withleaves, depth+1)
     yield depth, r
-    yield from walk_inorder(r.right, withleaves, depth+1)
+    yield from inorder_traversal(r.right, withleaves, depth+1)
 
 def first_exploder(
     r: Node,
@@ -121,7 +114,7 @@ def first_exploder(
             isleaf(node.right)
         )
 
-    s = walk_inorder(r, withleaves=False)
+    s = inorder_traversal(r, withleaves=False)
     for d, node in s:
         assert not isleaf(node)
         if explodable(d, node):
@@ -141,10 +134,57 @@ def first_exploder(
             break
         elif isleaf(node.right):
             right = node.right
+            break
     
     return left, exploder, right
 
-class ExplodingTests(unittest.TestCase):
+def part1(fname: str):
+    pass
+
+if __name__ == '__main__':
+    part1(sys.argv[1])
+    sys.exit(0)
+
+def explode_node(left: Leaf | None, node: Pair, right: Leaf | None):
+    if left:
+        left.value += node.left.value
+    if right:
+        right.value += node.right.value
+    
+    parent = node.parent
+    if parent.left == node:
+        parent.left = Leaf(parent, 0)
+    elif parent.right == node:
+        parent.right = Leaf(parent, 0)
+    else:
+        assert False, f'neither left nor right? {parent=} {node=}'
+    
+class ExplodeNodeTests(unittest.TestCase):
+    def test_explode(self):
+        examples = [
+            (1, [[2, 3], 3], [0, 6]),
+            (1, [6, [2, 3]], [8, 0]),
+            (2, [[6, [2, 3]], 11], [[8, 0], 14]),
+            
+            # from problems text
+
+            (None, [[[[[9,8],1],2],3],4], [[[[0,9],2],3],4]),
+            (None, [7,[6,[5,[4,[3,2]]]]], [7,[6,[5,[7,0]]]]),
+            (None, [[6,[5,[4,[3,2]]]],1], [[6,[5,[7,0]]],3]),
+            (None, [[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]], [[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]),
+            (None, [[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]], [[3,[2,[8,0]]],[9,[5,[7,0]]]]),
+        ]
+        for depth, input, expected in examples:
+            num = parse_pairs(str(input))
+            exp = format_pair(parse_pairs(str(expected)), sep="")
+
+            left, node, right = first_exploder(num, depth=depth)
+            self.assertIsNotNone(node)
+            explode_node(left, node, right)
+
+            self.assertEqual(exp, format_pair(num, sep="")) 
+
+class FirstExploderTests(unittest.TestCase):
     def test_no_exploder_in_single_leaf(self):
         r = parse_pairs("5")
         left, exploder, right = first_exploder(r)
