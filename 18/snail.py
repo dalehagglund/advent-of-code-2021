@@ -1,5 +1,5 @@
 from functools import partial, reduce
-from itertools import starmap
+from itertools import starmap, product
 import sys
 import typing as ty
 from dataclasses import dataclass, field
@@ -15,6 +15,8 @@ class Node(ABC):
     def _format_iter(self): ...
     @abstractmethod
     def magnitude(self) -> int: ...
+    @abstractmethod
+    def copy(self) -> 'Node': ...
 
 @dataclass
 class Leaf(Node):
@@ -23,6 +25,8 @@ class Leaf(Node):
         yield str(self.value)
     def magnitude(self):
         return self.value
+    def copy(self):
+        return Leaf(None, self.value)
 
 @dataclass
 class Pair(Node):
@@ -39,6 +43,8 @@ class Pair(Node):
         yield ']'
     def magnitude(self):
         return 3 * self.left.magnitude() + 2 * self.right.magnitude()
+    def copy(self):
+        return Pair(None, self.left.copy(), self.right.copy())
 
 def format_pair(r: Node, sep=" ") -> str:
     return sep.join(r._format_iter())
@@ -187,11 +193,24 @@ def read_input(fname: str) -> list[Node]:
         
 def part1(fname: str):
     pairs = read_input(fname)
+
     sum = reduce(add_pair, pairs)
     print(f'part 1: final magnitude {sum.magnitude()}')
 
+def part2(fname: str):
+    pairs = read_input(fname)
+
+    maxmag = max(
+        add_pair(pairs[i].copy(), pairs[j].copy()).magnitude()
+        for i, j in product(range(len(pairs)), repeat=2)
+        if i != j
+    )
+
+    print(f'part 2: max pairwise magnitude {maxmag}')
+
 if __name__ == '__main__':
     part1(sys.argv[1])
+    part2(sys.argv[1])
     sys.exit(0)
 
 class AdditionTests(unittest.TestCase):
