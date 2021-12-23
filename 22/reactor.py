@@ -160,7 +160,7 @@ def part1(fname: str):
 
 class CubeTree(abc.ABC):
     @abc.abstractmethod
-    def set(self, region: Cuboid): ...
+    def set(self, region: Cuboid, state: State): ...
 
     @abc.abstractmethod
     def box(self) -> Cuboid: ...
@@ -172,7 +172,34 @@ class CubeTree(abc.ABC):
     def off_count(self) -> int: ...
 
 class CubeLeaf(CubeTree):
-    pass
+    def __init__(self, box: Cuboid, lit: bool = False):
+        self._box = box
+        self._mat = np.full(
+            box.shape(),
+            dtype=np.bool8,
+            fill_value = 1 if lit else 0
+        ) 
+        self._update_oncount()
+    def on_count(self):
+        return self._oncount
+    def off_count(self):
+        return self._box.volume() - self._oncount
+    def box(self):
+        return self._box
+    def set(self, region: Cuboid, state: State):
+        assert self._box.contains(region)
+
+        imin = region.xb.min - self._box.xb.min
+        imax = region.xb.max - self._box.xb.min + 1
+        jmin = region.yb.min - self._box.yb.min
+        jmax = region.yb.max - self._box.yb.min + 1
+        kmin = region.zb.min - self._box.zb.min
+        kmax = region.zb.max - self._box.zb.min + 1
+
+        self._mat[imin : imax, jmin : jmax, kmin : kmax ] = state.value
+        self._update_oncount()
+    def _update_oncount(self):
+        self._oncount = np.sum(self._mat)
 
 class CubeNode(CubeTree):
     def __init__(self, box: Cuboid, lit: bool = False):
@@ -276,12 +303,12 @@ class CubeNodeTests(unittest.TestCase):
         self.assertEqual(8, len(node._children))
         for c in node._children:
             self.assertIsInstance(c, CubeNode)
-        self.assertEquals(2, node.height())
+        self.assertEqual(2, node.height())
     def test_light_entire_subcube(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
         subcube = node.box().split()[0]
         node.set(subcube, State.ON)
-        self.assertEquals(subcube.volume(), node.on_count())
+        self.assertEqual(subcube.volume(), node.on_count())
         self.assertEqual(2, node.height())
     def test_entire_cube_on_then_off(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
@@ -317,6 +344,25 @@ class CubeNodeTests(unittest.TestCase):
         node.set(node.box(), State.ON)
         node.set(subcube, State.OFF)
         self.assertEqual(node.box().volume() - subcube.volume(), node.on_count())
+
+class CubeLeafTests(unittest.TestCase):
+    def test_example_1(self):
+        input = [
+            (State.ON,  (10, 12, 10, 12, 10, 12)),
+            (State.ON,  (11, 13, 11, 13, 11, 13)),
+            (State.OFF, (9, 11, 9, 11, 9, 11)),
+            (State.ON,  (10, 10, 10, 10, 10, 10)),
+        ]
+        node = CubeLeaf(
+            Cuboid.from_bounds(-50, 50, -50, 50, -50, 50),
+            lit=False
+        )
+        for state, bounds in input:
+            node.set(
+                Cuboid.from_bounds(*bounds),
+                state
+            )
+        self.assertEqual(39, node.on_count())
 
 class IntersectionTests(unittest.TestCase):
     def test_bounds_has(self):
@@ -414,4 +460,4 @@ class SplitTests(unittest.TestCase):
             c = Cuboid.from_bounds(*expected)
             self.assertIn(c, splits)
             splits.remove(c)
-        self.assertEquals(0, len(splits))
+        self.assertEqual(0, len(splits))
