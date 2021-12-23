@@ -134,30 +134,6 @@ def read_input(fname:str) -> list[tuple[State, Cuboid]]:
     with open(fname) as f:
         return [ decode_line(line) for line in f ]
 
-def part1(fname: str):
-    core = Cuboid.from_bounds(-50, 50, -50, 50, -50, 50)
-    instrs = read_input(fname)
-
-    mat = np.full(shape=core.shape(), fill_value=0, dtype=np.bool8)
-
-    for toggle, cube in instrs:
-        if not core.contains(cube):
-            continue
-
-        imin = cube.xb.min - core.xb.min
-        imax = cube.xb.max - core.xb.min + 1
-
-        jmin = cube.yb.min - core.yb.min
-        jmax = cube.yb.max - core.yb.min + 1
-
-        kmin = cube.zb.min - core.zb.min
-        kmax = cube.zb.max - core.zb.min + 1
-
-        mat[imin : imax, jmin : jmax, kmin : kmax ] = toggle.value
-
-    count = np.sum(mat)
-    print(f'part 1: lit {count}')
-
 class CubeTree(abc.ABC):
     @abc.abstractmethod
     def set(self, region: Cuboid, state: State): ...
@@ -200,6 +176,17 @@ class CubeLeaf(CubeTree):
         self._update_oncount()
     def _update_oncount(self):
         self._oncount = np.sum(self._mat)
+
+def part1(fname: str):
+    core = CubeLeaf(
+        Cuboid.from_bounds(-50, 50, -50, 50, -50, 50)
+    )
+    instrs = read_input(fname)
+    for toggle, cube in instrs:
+        if not core.box().contains(cube):
+            continue
+        core.set(cube, toggle)
+    print(f'part 1: lit {core.on_count()}')
 
 class CubeNode(CubeTree):
     def __init__(self, box: Cuboid, lit: bool = False):
