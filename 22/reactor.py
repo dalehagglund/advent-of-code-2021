@@ -160,7 +160,7 @@ def part1(fname: str):
 
 class CubeTree(abc.ABC):
     @abc.abstractmethod
-    def switch_on(self, region: Cuboid): ...
+    def set(self, region: Cuboid): ...
 
     @abc.abstractmethod
     def box(self) -> Cuboid: ...
@@ -182,40 +182,19 @@ class CubeNode(CubeTree):
         self._oncount = self._box.volume() if lit else 0 
 
     def set(self, region: Cuboid, state: State):
-        pass
-
-    def switch_off(self, region: Cuboid):
         assert self._box.contains(region)
 
         if self._box == region and not self._expanded:
-            self._oncount = 0
+            self._oncount = [0, self._box.volume()][state.value]
         elif self._box == region and self._expanded:
             self._discard_children()
-            self._oncount  = 0
+            self._oncount = [0, self._box.volume()][state.value]
         elif self._box != region and not self._expanded:
             self._expand_children()
-            self._update_children(region)
+            self._update_children(region, state)
             self._oncount = sum(c.on_count() for c in self._children)
         elif self._box != region and self._expanded:
-            self._update_children(region)
-            self._oncount = sum(c.on_count() for c in self._children)
-        else:
-            assert False, "huh? case analysis exhausted"
-
-    def switch_on(self, region: Cuboid):
-        assert self._box.contains(region)
-
-        if self._box == region and not self._expanded:
-            self._oncount = self._box.volume()
-        elif self._box == region and self._expanded:
-            self._discard_children()
-            self._oncount  = self._box.volume()
-        elif self._box != region and not self._expanded:
-            self._expand_children()
-            self._update_children(region)
-            self._oncount = sum(c.on_count() for c in self._children)
-        elif self._box != region and self._expanded:
-            self._update_children(region)
+            self._update_children(region, state)
             self._oncount = sum(c.on_count() for c in self._children)
         else:
             assert False, "huh? case analysis exhausted"
@@ -224,17 +203,20 @@ class CubeNode(CubeTree):
         self._children = None
         self._expanded = False
     def _expand_children(self):
+        assert not self._children
+        assert self._oncount in [0, self._box.volume()]
+        lit = self._oncount == self._box.volume()
         self._children = [
-            CubeNode(subbox, False)
+            CubeNode(subbox, lit=lit)
             for subbox in self._box.split()
         ]
         self._expanded = True
-    def _update_children(self, region: Cuboid):
+    def _update_children(self, region: Cuboid, state: State):
         for child in self._children:
             subregion = child._box.intersection(region)
             if not subregion:
                 continue
-            child.switch_on(subregion)
+            child.set(subregion, state)
 
     def box(self): return self._box
     def on_count(self): return self._oncount
@@ -271,20 +253,20 @@ class CubeNodeTests(unittest.TestCase):
     def make_node(self, *bounds):
         return CubeNode(Cuboid.from_bounds(*bounds))
     def test_new_node_unlit(self):
-        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10)
+        cube = Cuboid.from_bounds(0, 127, 0, 127, 0, 127)
         node = CubeNode(cube)
         self.assertEqual(cube, node.box())
         self.assertEqual(0, node.on_count())
         self.assertEqual(cube.volume(), node.off_count())
     def test_new_node_lit(self):
-        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10)
+        cube = Cuboid.from_bounds(0, 127, 0, 127, 0, 127)
         node = CubeNode(cube, lit=True)
         self.assertEqual(cube.volume(), node.on_count())
         self.assertEqual(0, node.off_count())
     def test_light_entire_cube(self):
-        cube = Cuboid.from_bounds(0, 10, 0, 10, 0, 10)
+        cube = Cuboid.from_bounds(0, 127, 0, 127, 0, 127)
         node = CubeNode(cube)
-        node.switch_on(cube)
+        node.set(cube, State.ON)
         self.assertEqual(cube.volume(), node.on_count())
         self.assertEqual(0, node.off_count())
     def test_large_expand(self):
@@ -298,27 +280,43 @@ class CubeNodeTests(unittest.TestCase):
     def test_light_entire_subcube(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
         subcube = node.box().split()[0]
-        node.switch_on(subcube)
+        node.set(subcube, State.ON)
         self.assertEquals(subcube.volume(), node.on_count())
         self.assertEqual(2, node.height())
     def test_entire_cube_on_then_off(self):
-        node = self.make_node(0, 10, 0, 10, 0, 10)
-        node.switch_on(node.box())
-        node.switch_off(node.box())
+        node = self.make_node(0, 127, 0, 127, 0, 127)
+        node.set(node.box(), State.ON)
+        node.set(node.box(), State.OFF)
         self.assertEqual(node.box().volume(), node.off_count())
         self.assertEqual(0, node.on_count())
         self.assertEqual(1, node.height())
     def test_toggle_subcube_on_then_off(self):
-        node = self.make_node(0, 10, 0, 10, 0, 10)
+        node = self.make_node(0, 127, 0, 127, 0, 127)
         subcube = node.box().split()[0]
-        node.switch_on(subcube)
-        node.switch_off(subcube)
+        node.set(subcube, State.ON)
+        node.set(subcube, State.OFF)
         self.assertEqual(0, node.on_count())
-        self.assertEqual(1, node.height())
-        self.assertEqual(node.box().volume(), node.off_count())
-
-
-
+        self.assertEqual(2, node.height())
+    def test_light_then_clear_subcube(self):
+        node = self.make_node(0, 127, 0, 127, 0, 127)
+        subcube = node.box().split()[0]
+        node.set(subcube, State.ON)
+        node.set(subcube, State.OFF)
+        self.assertEqual(0, node.on_count())
+        self.assertEqual(2, node.height())
+    def test_light_two_subcubes(self):
+        node = self.make_node(0, 127, 0, 127, 0, 127)
+        splits = node.box().split()
+        sub1, sub2 = splits[0], splits[-1]
+        node.set(sub1, State.ON)
+        node.set(sub2, State.ON)
+        self.assertEqual(sub1.volume() + sub2.volume(), node.on_count())
+    def test_light_entire_cube_then_clear_subcube(self):
+        node = self.make_node(0, 127, 0, 127, 0, 127)
+        subcube = node.box().split()[0]
+        node.set(node.box(), State.ON)
+        node.set(subcube, State.OFF)
+        self.assertEqual(node.box().volume() - subcube.volume(), node.on_count())
 
 class IntersectionTests(unittest.TestCase):
     def test_bounds_has(self):
