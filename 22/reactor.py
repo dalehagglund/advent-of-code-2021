@@ -147,6 +147,9 @@ class CubeTree(abc.ABC):
     @abc.abstractmethod
     def off_count(self) -> int: ...
 
+    @abc.abstractmethod
+    def height(self) -> int: ...
+
 class CubeLeaf(CubeTree):
     def __init__(self, box: Cuboid, lit: bool = False):
         self._box = box
@@ -160,6 +163,8 @@ class CubeLeaf(CubeTree):
         return self._oncount
     def off_count(self):
         return self._box.volume() - self._oncount
+    def height(self):
+        return 1
     def box(self):
         return self._box
     def set(self, region: Cuboid, state: State):
@@ -189,6 +194,10 @@ def part1(fname: str):
     print(f'part 1: lit {core.on_count()}')
 
 class CubeNode(CubeTree):
+    # use a leaf node if an child would have
+    # a dimension smaller than this.
+    MIN_DIMENSION = 100
+
     def __init__(self, box: Cuboid, lit: bool = False):
         self._box = box
         self._expanded = False
@@ -221,17 +230,30 @@ class CubeNode(CubeTree):
         assert self._oncount in [0, self._box.volume()]
         lit = self._oncount == self._box.volume()
         self._children = [
-            CubeNode(subbox, lit=lit)
+            self._make_child(subbox, lit)
             for subbox in self._box.split()
         ]
         self._expanded = True
+
+    def _make_child(self, region, lit):
+        min_side =  min(
+            region.xb.length(),
+            region.yb.length(),
+            region.zb.length()
+        )
+        if min_side <= CubeNode.MIN_DIMENSION:
+            factory = CubeLeaf
+        else:
+            factory = CubeNode
+        return factory(region, lit=lit)
+
+
     def _update_children(self, region: Cuboid, state: State):
         for child in self._children:
             subregion = child._box.intersection(region)
             if not subregion:
                 continue
             child.set(subregion, state)
-
     def box(self): return self._box
     def on_count(self): return self._oncount
     def off_count(self): return self._box.volume() - self._oncount
@@ -283,8 +305,16 @@ class CubeNodeTests(unittest.TestCase):
         node.set(cube, State.ON)
         self.assertEqual(cube.volume(), node.on_count())
         self.assertEqual(0, node.off_count())
-    def test_large_expand(self):
+    def test_small_expand(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
+        node._expand_children()
+        self.assertTrue(node._expanded)
+        self.assertEqual(8, len(node._children))
+        for c in node._children:
+            self.assertIsInstance(c, CubeLeaf)
+        self.assertEqual(2, node.height())
+    def test_large_expand(self):
+        node = self.make_node(0, 255, 0, 255, 0, 255)
         node._expand_children()
         self.assertTrue(node._expanded)
         self.assertEqual(8, len(node._children))
