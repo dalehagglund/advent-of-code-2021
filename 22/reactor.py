@@ -1,4 +1,4 @@
-from functools import reduce
+from functools import partial, reduce
 import numpy as np
 from enum import Enum, auto
 import sys
@@ -9,6 +9,8 @@ from itertools import islice, product
 import unittest
 import typing as ty
 import abc
+
+np.seterr(all='raise')
 
 # closed integer interval
 class Bounds(NamedTuple):
@@ -110,6 +112,16 @@ class Cuboid:
             self.yb.length(),
             self.zb.length()
         )
+    def __str__(self):
+        return "".join([
+            'Cuboid(',
+            "..".join(str(b) for b in self.xb),
+            ", ",
+            "..".join(str(b) for b in self.yb),
+            ", ",
+            "..".join(str(b) for b in self.zb),
+            ')'
+        ])
 
 class State(Enum):
     ON = 1
@@ -148,7 +160,13 @@ class CubeTree(abc.ABC):
     def off_count(self) -> int: ...
 
     @abc.abstractmethod
-    def height(self) -> int: ...
+    def maxheight(self) -> int: ...
+
+    @abc.abstractmethod
+    def minheight(self) -> int: ...
+
+    @abc.abstractmethod
+    def nodecount(self) -> int: ...
 
 class CubeLeaf(CubeTree):
     def __init__(self, box: Cuboid, lit: bool = False):
@@ -163,10 +181,16 @@ class CubeLeaf(CubeTree):
         return self._oncount
     def off_count(self):
         return self._box.volume() - self._oncount
-    def height(self):
+    def maxheight(self):
+        return 1
+    def minheight(self):
+        return 1
+    def nodecount(self):
         return 1
     def box(self):
         return self._box
+    def visit(self, visitor, depth=0):
+        visitor('leaf', self, depth)
     def set(self, region: Cuboid, state: State):
         assert self._box.contains(region)
 
@@ -180,7 +204,7 @@ class CubeLeaf(CubeTree):
         self._mat[imin : imax, jmin : jmax, kmin : kmax ] = state.value
         self._update_oncount()
     def _update_oncount(self):
-        self._oncount = np.sum(self._mat)
+        self._oncount = int(np.sum(self._mat, dtype=np.int32))
 
 def part1(fname: str):
     core = CubeLeaf(
@@ -196,7 +220,7 @@ def part1(fname: str):
 class CubeNode(CubeTree):
     # use a leaf node if an child would have
     # a dimension smaller than this.
-    MIN_DIMENSION = 100
+    MIN_DIMENSION = 20
 
     def __init__(self, box: Cuboid, lit: bool = False):
         self._box = box
@@ -247,7 +271,6 @@ class CubeNode(CubeTree):
             factory = CubeNode
         return factory(region, lit=lit)
 
-
     def _update_children(self, region: Cuboid, state: State):
         for child in self._children:
             subregion = child._box.intersection(region)
@@ -257,19 +280,32 @@ class CubeNode(CubeTree):
     def box(self): return self._box
     def on_count(self): return self._oncount
     def off_count(self): return self._box.volume() - self._oncount
-    def height(self):
+    def nodecount(self):
+        if not self._expanded: return 1
+        return 1 + sum(c.nodecount() for c in self._children)
+    def minheight(self):
         if not self._expanded:
             return 1
-        return 1 + max(c.height() for c in self._children)
+        return 1 + min(c.minheight() for c in self._children)
+    def maxheight(self):
+        if not self._expanded:
+            return 1
+        return 1 + max(c.maxheight() for c in self._children)
+    def visit(self, visitor, depth=0):
+        visitor('before node', self, depth)
+        if self._expanded:
+            for c in self._children:
+                c.visit(visitor, depth+1)
+        visitor('after node', self, depth)
 
 def flip(f): return lambda *args: f(*reversed(args))
 
 def part2(fname: str):
     instrs = read_input(fname)
-
     cuboid = reduce(
         lambda c1, c2: c1.extend_to(c2),
         (inst[1] for inst in instrs))
+
     max_set = sum(c.volume() for toggle, c in instrs if toggle == State.ON)
     max_clear = sum(c.volume() for toggle, c in instrs if toggle == State.OFF)
     print('max cuboid', cuboid)
@@ -278,12 +314,120 @@ def part2(fname: str):
     print('max cells clear', max_set)
     print('max set density', max_set / cuboid.volume())
     print('max clear density', max_clear / cuboid.volume())
+
+    if max(
+        cuboid.xb.length(), 
+        cuboid.yb.length(),
+        cuboid.zb.length(),
+    ) > CubeNode.MIN_DIMENSION:
+        node = CubeNode(cuboid)
+    else:
+        node = CubeLeaf(cuboid)
+
+    node = CubeNode(cuboid)
+
+    for i, (toggle, cube) in enumerate(instrs):
+        minh = node.minheight()
+        maxh = node.maxheight()
+        nc = node.nodecount()
+        print(f'step {i} {nc = } {minh = } {maxh = } {toggle = } {cube = }')
+        node.set(cube, toggle)
+        
+
+    print(f'part 2: total lit {node.on_count()}')
     return 
 
 if __name__ == '__main__':
     part1(sys.argv[1])
     part2(sys.argv[1])
     exit(0)
+
+warn = partial(print, file=sys.stderr)
+
+class BigTests(unittest.TestCase):
+    def make_node(self, size):
+        return CubeNode(
+            Cuboid.from_bounds(
+                -size, size,
+                -size, size,
+                -size, size
+            ))
+    def make_region(self, size):
+        return Cuboid.from_bounds(
+            -size, size,
+            -size, size,
+            -size, size
+        )
+    def test_tiny_region(self):
+        warn('\ntiny')
+        node =  self.make_node(1000)
+        region = self.make_region(2)
+        node.set(region, State.ON)
+        minh = node.minheight()
+        maxh = node.maxheight()
+        count = node.nodecount()
+
+        warn(f'{minh = } {maxh = } {count = }')
+        self.assertEquals(region.volume(), node.on_count())
+    def test_huge_region(self):
+        warn('\nhuge')
+        N = 1000
+        node =  self.make_node(N)
+        region = self.make_region(N - 50)
+        node.set(region, State.ON)
+        minh = node.minheight()
+        maxh = node.maxheight()
+        count = node.nodecount()
+        @dataclass
+        class Stats:
+            total: int = 0
+            inside: int = 0
+            outside: int = 0
+            edge: int = 0
+            expanded: int = 0
+        nstats = Stats()
+        lstats = Stats()
+
+        def visitor(tag, node, depth):
+            if tag not in ['before node', 'leaf']:
+                return
+
+            intersection = region.intersection(node.box())
+            inside = intersection == node.box()
+            outside = intersection == None
+            edge = intersection is not None and intersection != node.box()
+            leaf = isinstance(node, CubeLeaf)
+
+            expanded = node._expanded if not leaf else False
+
+            if_ = ".I"[inside]
+            of = '.O'[outside]
+            ef = '.E'[edge]
+            lf = '.L'[leaf]
+            xf = ".X"[expanded]
+
+            assert sum([inside, outside, edge]) == 1
+            # if inside: assert not expanded
+            # if outside: assert not expanded
+            # if edge and not leaf: assert expanded
+
+            bucket = lstats if leaf else nstats
+                
+            bucket.inside += inside
+            bucket.outside += outside
+            bucket.edge += edge
+            bucket.expanded += expanded
+            bucket.total += 1
+            
+            # if not leaf:
+            #     warn(" >" * depth, "node", f'{lf}{if_}{ef}{of}{xf}', node.box())
+
+        node.visit(visitor)
+
+        warn(f'{region = }')
+        warn(f'{minh = } {maxh = } {count = }')
+        warn(f'{nstats = } {lstats = }')
+        self.assertEquals(region.volume(), node.on_count())
 
 class CubeNodeTests(unittest.TestCase):
     def make_node(self, *bounds):
@@ -312,7 +456,7 @@ class CubeNodeTests(unittest.TestCase):
         self.assertEqual(8, len(node._children))
         for c in node._children:
             self.assertIsInstance(c, CubeLeaf)
-        self.assertEqual(2, node.height())
+        self.assertEqual(2, node.maxheight())
     def test_large_expand(self):
         node = self.make_node(0, 255, 0, 255, 0, 255)
         node._expand_children()
@@ -320,34 +464,34 @@ class CubeNodeTests(unittest.TestCase):
         self.assertEqual(8, len(node._children))
         for c in node._children:
             self.assertIsInstance(c, CubeNode)
-        self.assertEqual(2, node.height())
+        self.assertEqual(2, node.maxheight())
     def test_light_entire_subcube(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
         subcube = node.box().split()[0]
         node.set(subcube, State.ON)
         self.assertEqual(subcube.volume(), node.on_count())
-        self.assertEqual(2, node.height())
+        self.assertEqual(2, node.maxheight())
     def test_entire_cube_on_then_off(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
         node.set(node.box(), State.ON)
         node.set(node.box(), State.OFF)
         self.assertEqual(node.box().volume(), node.off_count())
         self.assertEqual(0, node.on_count())
-        self.assertEqual(1, node.height())
+        self.assertEqual(1, node.maxheight())
     def test_toggle_subcube_on_then_off(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
         subcube = node.box().split()[0]
         node.set(subcube, State.ON)
         node.set(subcube, State.OFF)
         self.assertEqual(0, node.on_count())
-        self.assertEqual(2, node.height())
+        self.assertEqual(2, node.maxheight())
     def test_light_then_clear_subcube(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
         subcube = node.box().split()[0]
         node.set(subcube, State.ON)
         node.set(subcube, State.OFF)
         self.assertEqual(0, node.on_count())
-        self.assertEqual(2, node.height())
+        self.assertEqual(2, node.maxheight())
     def test_light_two_subcubes(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
         splits = node.box().split()
