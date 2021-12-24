@@ -169,42 +169,83 @@ class CubeTree(abc.ABC):
     def nodecount(self) -> int: ...
 
 class CubeLeaf(CubeTree):
+    _ALL_ON, _ALL_OFF, _MAT = range(3)
+
     def __init__(self, box: Cuboid, lit: bool = False):
         self._box = box
-        self._mat = np.full(
-            box.shape(),
-            dtype=np.bool8,
-            fill_value = 1 if lit else 0
-        ) 
+        self._state = State.ON if lit else State.OFF
+        self._mat = None
         self._update_oncount()
+        self._concheck()
+    def _concheck(self):
+        assert (self._state is not None) == (self._mat is None)
     def on_count(self):
+        self._concheck()
         return self._oncount
     def off_count(self):
+        self._concheck()
         return self._box.volume() - self._oncount
     def maxheight(self):
+        self._concheck()
         return 1
     def minheight(self):
+        self._concheck()
         return 1
     def nodecount(self):
+        self._concheck()
         return 1
     def box(self):
+        self._concheck()
         return self._box
     def visit(self, visitor, depth=0):
+        self._concheck()
         visitor('leaf', self, depth)
     def set(self, region: Cuboid, state: State):
+        self._concheck()
         assert self._box.contains(region)
 
+        whole_box = self._box == region
+        using_mat = self._state is None
+
+        if whole_box and using_mat:
+            self._state = state
+            self._mat = None
+        elif whole_box and not using_mat:
+            self._state = state
+        elif not whole_box and using_mat:
+            assert self._mat is not None
+            self._state = None
+            self._update_mat(region, state)
+        elif not whole_box and not using_mat:
+            self._mat = np.full(
+                self._box.shape(),
+                dtype=np.bool8,
+                fill_value=self._state.value,
+            ) 
+            self._state = None
+            self._update_mat(region, state)
+        else:
+            assert False, "huh? case analysis incomplete?"
+
+        self._update_oncount()
+        self._concheck()
+
+    def _update_mat(self, region: Cuboid, state: State):
         imin = region.xb.min - self._box.xb.min
         imax = region.xb.max - self._box.xb.min + 1
         jmin = region.yb.min - self._box.yb.min
         jmax = region.yb.max - self._box.yb.min + 1
         kmin = region.zb.min - self._box.zb.min
         kmax = region.zb.max - self._box.zb.min + 1
-
         self._mat[imin : imax, jmin : jmax, kmin : kmax ] = state.value
-        self._update_oncount()
+
     def _update_oncount(self):
-        self._oncount = int(np.sum(self._mat, dtype=np.int32))
+        if self._state == State.ON:
+            self._oncount = self._box.volume()
+        elif self._state == State.OFF:
+            self._oncount = 0
+        elif self._state is None:
+            self._oncount = int(np.sum(self._mat, dtype=np.int32))
 
 def part1(fname: str):
     core = CubeLeaf(
@@ -362,7 +403,6 @@ if __name__ == '__main__':
 
 warn = partial(print, file=sys.stderr)
 
-# @unittest.skip("turning off while re-working splitting")
 class BigTests(unittest.TestCase):
     def make_node(self, size):
         return CubeNode(
@@ -439,13 +479,14 @@ class BigTests(unittest.TestCase):
             bucket.total += 1
             
             # if not leaf:
-            #     warn(" >" * depth, "node", f'{lf}{if_}{ef}{of}{xf}', node.box())
+                # warn(" >" * depth, "node", f'{lf}{if_}{ef}{of}{xf}', node.box())
 
         node.visit(visitor)
 
         warn(f'{region = }')
         warn(f'{minh = } {maxh = } {count = }')
-        warn(f'{nstats = } {lstats = }')
+        warn(f'{nstats = }')
+        warn(f'{lstats = }')
         self.assertEquals(region.volume(), node.on_count())
 
 class CubeNodeTests(unittest.TestCase):
@@ -468,22 +509,22 @@ class CubeNodeTests(unittest.TestCase):
         node.set(cube, State.ON)
         self.assertEqual(cube.volume(), node.on_count())
         self.assertEqual(0, node.off_count())
-    @unittest.skip("while changing expansion")
     def test_small_expand(self):
         node = self.make_node(0, 127, 0, 127, 0, 127)
-        node._expand_children()
+        node._expand_children(
+            Cuboid.from_bounds(5, 120, 5, 120, 5, 120)
+        )
         self.assertTrue(node._expanded)
-        self.assertEqual(8, len(node._children))
-        for c in node._children:
+        for c in node._child_grid.ravel():
             self.assertIsInstance(c, CubeLeaf)
         self.assertEqual(2, node.maxheight())
-    @unittest.skip("while changing expansion")
     def test_large_expand(self):
         node = self.make_node(0, 255, 0, 255, 0, 255)
-        node._expand_children()
+        node._expand_children(
+            Cuboid.from_bounds(5, 250, 5, 250, 5, 250)
+        )
         self.assertTrue(node._expanded)
-        self.assertEqual(8, len(node._children))
-        for c in node._children:
+        for c in node._child_grid.ravel():
             self.assertIsInstance(c, CubeNode)
         self.assertEqual(2, node.maxheight())
     def test_light_entire_subcube(self):
@@ -545,6 +586,28 @@ class CubeLeafTests(unittest.TestCase):
                 state
             )
         self.assertEqual(39, node.on_count())
+    def test_turn_one_on(self):
+        node = CubeLeaf(
+            Cuboid.from_bounds(-50, 50, -50, 50, -50, 50),
+            lit=False
+        )
+        node.set(
+            Cuboid.from_bounds(0, 0, 0, 0, 0, 0),
+            State.ON
+        )
+        self.assertEqual(1, node.on_count())
+    def test_all_off(self):
+        node = CubeLeaf(
+            Cuboid.from_bounds(-50, 50, -50, 50, -50, 50),
+            lit=False
+        )
+        self.assertEqual(0, node.on_count())
+    def test_all_on(self):
+        node = CubeLeaf(
+            Cuboid.from_bounds(-50, 50, -50, 50, -50, 50),
+            lit=True
+        )
+        self.assertEqual(node.box().volume(), node.on_count())
 
 class IntersectionTests(unittest.TestCase):
     def test_bounds_has(self):
