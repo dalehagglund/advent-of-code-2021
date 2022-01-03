@@ -82,13 +82,16 @@ def part1(fname: str):
 
     inf = InfGrid(algo, image)
 
-    print_grid(f"gen 0 (fill: {inf.fill()})", inf._image)
-    inf.enhance()
-    print_grid(f"gen 1 (fill: {inf.fill()})", inf._image)
-    inf.enhance()
-    print_grid(f"gen 2 (fill: {inf.fill()})", inf._image)
+    for i in range(1, 51):
+        inf.enhance()
+        print(f'... step {i}')
+        if i == 2:
+            step2_count = inf.lit_count()
+        elif i == 50:
+            step50_count = inf.lit_count()
 
-    print(f'part 1: total lit {inf.lit_count()}')
+    print(f'part 1: total lit {step2_count}')
+    print(f'part 2: total lit {step50_count}')
 
 if __name__ == '__main__':
     import sys
